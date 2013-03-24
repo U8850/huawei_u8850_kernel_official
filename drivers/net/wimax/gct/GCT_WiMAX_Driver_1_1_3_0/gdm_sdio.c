@@ -39,13 +39,6 @@ static struct workqueue_struct *sdio_wimax_wq;
 static int init_sdio(struct sdiowm_dev *sdev);
 static void release_sdio(struct sdiowm_dev *sdev);
 
-//#ifdef CONFIG_GDM_SDIO_PM
-#include "gdm_sdio_pm.h"
-
-static LIST_HEAD(pm_devs);
-extern void (*gdm_wimax_pm_event)(int);
-//#endif // CONFIG_GDM_SDIO_PM
-
 #ifdef DEBUG
 static void hexdump(char *title, u8 *data, int len)
 {
@@ -372,23 +365,16 @@ static void do_tx(struct work_struct *work)
 	struct sdio_func *func = sdev->func;
 	struct tx_cxt *tx = &sdev->tx;
 	struct sdio_tx *t = NULL;
-	//struct timeval tv;
-//DIV5-CONN-PT2-JH-JOHOR-613-01+[
-	struct timeval now;
-	struct timeval *before;
-	int diff = 0;
-//DIV5-CONN-PT2-JH-JOHOR-613-01+]	
+	struct timeval tv;
 	int is_sdu = 0;
 	unsigned long flags;
 
 	spin_lock_irqsave(&tx->lock, flags);
-	if (!tx->can_send || sdev->suspended) {
-	    printk(KERN_INFO "gdm_sdio %s blocked.\n", __func__);
+	if (!tx->can_send) {
 		spin_unlock_irqrestore(&tx->lock, flags);
 		return;
 	}
-//DIV5-CONN-PT2-JH-JOHOR-613-01-[		
-/*
+
 	if (!list_empty(&tx->hci_list)) {
 		t = list_entry(tx->hci_list.next, struct sdio_tx, list);
 		list_del(&t->list);
@@ -409,27 +395,7 @@ static void do_tx(struct work_struct *work)
 		}
 		is_sdu = 1;
 	}
-*/
-//DIV5-CONN-PT2-JH-JOHOR-613-01-]
-//DIV5-CONN-PT2-JH-JOHOR-613-01+[
-	if (!list_empty(&tx->hci_list)) { 
-		t = list_entry(tx->hci_list.next, struct sdio_tx, list); 
-		list_del(&t->list); 
-		is_sdu = 0; 
-	}
-	else if (!tx->stop_sdu_tx && !list_empty(&tx->sdu_list)) {
-	    do_gettimeofday(&now);
-	    before = &tx->sdu_stamp;
-	
-	    diff = (now.tv_sec - before->tv_sec) * 1000000 + (now.tv_usec - before->tv_usec);
-	    if (diff >= 0 && diff < TX_INTERVAL) { 
-		    queue_work(sdio_wimax_wq, &sdev->ws); 
-	        spin_unlock_irqrestore(&tx->lock, flags); 
-		    return; 
-		}
-	    is_sdu = 1;
-	}	
-//DIV5-CONN-PT2-JH-JOHOR-613-01+]	
+
 	if (!is_sdu && t == NULL) {
 		spin_unlock_irqrestore(&tx->lock, flags);
 		return;
@@ -582,7 +548,7 @@ static void gdm_sdio_irq(struct sdio_func *func)
 	u32 len, blocks, n;
 	int ret, remain;
 
-    //printk(KERN_INFO "%s\n", __func__);  //SW2-CONN-EC-WiMAX_Log-01+
+    printk(KERN_INFO "%s\n", __func__);  //SW2-CONN-EC-WiMAX_Log-01+
 	/* If previously receivced data hasn't been handled yet, postone rx. */
 	if (AHEAD_RECEIVED(rx))
 		return;
@@ -746,72 +712,6 @@ static void wimax_debugfs_init(void) {}
 static void wimax_debugfs_deinit(void) {}
 #endif
 //SW2-CONN-EC-DBGFS-01+]
-//#ifdef CONFIG_GDM_SDIO_PM
-static void notify_pm_event(struct sdiowm_dev *sdev, int event)
-{
-	struct rx_cxt *rx = &sdev->rx;
-	struct sdio_rx *r;
-	unsigned long flags;
-	u32 buffer[2], len = 1;
-	struct hci *hci = (struct hci *)buffer;
-
-	hci->cmd_evt = H2B(WIMAX_PM_EVENT);
-	hci->length = H2B(len);
-	hci->data[0] = event;
-
-	spin_lock_irqsave(&rx->lock, flags);
-
-	if (!list_empty(&rx->req_list)) {
-		r = list_entry(rx->req_list.next, struct sdio_rx, list);
-		spin_unlock_irqrestore(&rx->lock, flags);
-		if (r->callback)
-			r->callback(r->cb_data, hci, HCI_HEADER_SIZE + len);
-		spin_lock_irqsave(&rx->lock, flags);
-		list_del(&r->list);
-		put_rx_struct(rx, r);
-	}
-
-	spin_unlock_irqrestore(&rx->lock, flags);
-}
-
-static void gdm_pm_event_handler(int event)
-{
-	struct sdiowm_dev *sdev;
-	struct tx_cxt *tx;
-	unsigned long flags;
-    printk(KERN_INFO "gdm_pm_event_handler event= %d\n", event);//DIV5-CONN-MW-POWER SAVING MODE-07*+
-	list_for_each_entry(sdev, &pm_devs, pm_list) {
-		switch (event) {
-			case GDM_SYS_SUSPEND:
-				notify_pm_event(sdev, GDM_SYS_SUSPEND);
-				break;
-			case GDM_SYS_RESUME:
-				notify_pm_event(sdev, GDM_SYS_RESUME);
-				break;
-			case GDM_WIMAX_SUSPEND:
-				notify_pm_event(sdev, GDM_WIMAX_SUSPEND);
-				
-				tx = &sdev->tx;
-				spin_lock_irqsave(&tx->lock, flags);
-				printk(KERN_INFO "%s set sdev->suspended = 1\n", __func__);
-				sdev->suspended = 1;
-				spin_unlock_irqrestore(&tx->lock, flags);
-				break;
-			case GDM_WIMAX_RESUME:
-				notify_pm_event(sdev, GDM_WIMAX_RESUME);
-
-				tx = &sdev->tx;
-				spin_lock_irqsave(&tx->lock, flags);
-				printk(KERN_INFO "%s set sdev->suspended = 0\n", __func__);				
-				sdev->suspended = 0;
-
-				queue_work(sdio_wimax_wq, &sdev->ws);
-				spin_unlock_irqrestore(&tx->lock, flags);
-				break;
-		}
-	}
-}
-//#endif // CONFIG_GDM_SDIO_PM
 
 static int sdio_wimax_probe(struct sdio_func *func, const struct sdio_device_id *id)
 {
@@ -861,9 +761,6 @@ static int sdio_wimax_probe(struct sdio_func *func, const struct sdio_device_id 
 	INIT_WORK(&sdev->ws, do_tx);
 
 	sdio_set_drvdata(func, phy_dev);
-//#ifdef CONFIG_GDM_SDIO_PM
-	list_add_tail(&sdev->pm_list, &pm_devs);
-//#endif
 
     wimax_debugfs_init(); //SW2-CONN-EC-DBGFS-01+
 out:
@@ -882,9 +779,7 @@ static void sdio_wimax_remove(struct sdio_func *func)
 {
 	struct phy_dev *phy_dev = sdio_get_drvdata(func);
 	struct sdiowm_dev *sdev = phy_dev->priv_dev;
-//#ifdef CONFIG_GDM_SDIO_PM
-	list_del(&sdev->pm_list);
-//#endif
+
 	if (phy_dev->netdev)
 		unregister_wimax_device(phy_dev);
 	sdio_claim_host(func);
@@ -987,17 +882,12 @@ static int __init sdio_gdm_wimax_init(void)
     if (wimax_gpio_init())
         return -1;
 //SW2-CONN-EC-WiMAX_GPIO-01+]
-//#ifdef CONFIG_GDM_SDIO_PM
-	gdm_wimax_pm_event = gdm_pm_event_handler;
-//#endif // CONFIG_GDM_SDIO_PM
 
 	return sdio_register_driver(&sdio_wimax_driver);
 }
 
 static void __exit sdio_gdm_wimax_exit(void)
 {
-    printk(KERN_INFO "gdmwm %s gdm_wimax_pm_event set NULL\n", __func__);
-	gdm_wimax_pm_event = NULL;
 	sdio_unregister_driver(&sdio_wimax_driver);
 	if (sdio_wimax_wq)
 		destroy_workqueue(sdio_wimax_wq);

@@ -72,8 +72,6 @@ struct mt9p111_reg {
 	uint16_t context_b_to_a_tbl_size;
 	const struct mt9p111_i2c_reg_conf *aftbl;
 	uint16_t aftbl_size;
-	const struct mt9p111_i2c_reg_conf *marcoaftbl;
-	uint16_t marcoaftbl_size;
 	const struct mt9p111_i2c_reg_conf *patch_tbl;
 	uint16_t patch_tbl_size;
 	const struct mt9p111_i2c_reg_conf *ab_off_tbl;

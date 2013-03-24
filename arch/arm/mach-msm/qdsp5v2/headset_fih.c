@@ -93,7 +93,6 @@ bool mSuspend = false; //Div6-PT2-MM-SL-HS WAKE UP IN SUSPEND-
 enum {
 	NO_DEVICE	= 0,
 	HEADSET	= 1,
-	NOMIC_HEADSET	= 2,//MM-RC-SupportNO_MIC_Hs-00+
 };
 //SW2-6-MM-RC-Modify the HS Detect function for SF5 and SF6-00*{
 
@@ -279,8 +278,7 @@ static void insert_headset(void)
 			H2W_DBG("aud_hs:switch to ext. mic\n ");
 		}
 		//MM-RC-ChangeCodingStyle-00+}
-		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_ALWAYS);//MM-SL-PTTIsAbnormalInSuspend-00* /*PM_HSED_ENABLE_PWM_TCXO*/
-
+		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_PWM_TCXO);
 		H2W_DBG("aud_hs:open mic bias\n ");
 		//#endif //MM-RC-ChangeCodingStyle-00-
 		//SW2-6-MM-RC-Audio_Porting-00+}
@@ -301,11 +299,7 @@ static void insert_headset(void)
 		/* Enable button irq */
 		local_irq_save(irq_flags);
 		enable_irq(hi->irq_btn);
-		//SW3-MM-DL-DoNotSetIrqWakeForHS-00+{
-		#ifndef CONFIG_FIH_PROJECT_SF4Y6
-		set_irq_wake(hi->irq_btn, 1);
-		#endif
-		//SW3-MM-DL-DoNotSetIrqWakeForHS-00+}
+		set_irq_wake(hi->irq_btn, 1); 
 		local_irq_restore(irq_flags);
 		bn_irq_enable=1;
 		}
@@ -317,7 +311,7 @@ static void insert_headset(void)
 	
         	if(gpio_get_value(AUD_PIN_HOOK_BTN)==1)
         	{
-            		//switch_set_state(&hi->sdev, HEADSET);//MM-RC-SupportNO_MIC_Hs-00-
+            		switch_set_state(&hi->sdev, HEADSET);
             		#ifdef AUD_HOOK_BTN 
             		set_irq_type(hi->irq_btn, IRQF_TRIGGER_LOW );
             		#endif 
@@ -325,7 +319,6 @@ static void insert_headset(void)
 			msleep(500);
 			if(gpio_get_value(AUD_PIN_HOOK_BTN)==1)
 			{
-				switch_set_state(&hi->sdev, NOMIC_HEADSET);//MM-RC-SupportNO_MIC_Hs-00+
        			//SW2-6-MM-RC-Audio_Porting-00+{
        			//In7x30 3 rings, ext. mic bias must be disabled  here for power saving purpose
        			//#ifdef CONFIG_FIH_PROJECT_SFX  //MM-RC-ChangeCodingStyle-00-
@@ -338,7 +331,6 @@ static void insert_headset(void)
         		}
 			else
 			{
-				switch_set_state(&hi->sdev, HEADSET);//MM-RC-SupportNO_MIC_Hs-00+
 				H2W_DBG("aud_hs:HEADSET is plugging\n ");
 			}
         	}
@@ -387,11 +379,7 @@ static void remove_headset(void)
 		/* Disable button */
 		local_irq_save(irq_flags);
 		disable_irq(hi->irq_btn);
-		//SW3-MM-DL-DoNotSetIrqWakeForHS-00+{
-		#ifndef CONFIG_FIH_PROJECT_SF4Y6
-		set_irq_wake(hi->irq_btn, 0);
-		#endif
-		//SW3-MM-DL-DoNotSetIrqWakeForHS-00+}
+		set_irq_wake(hi->irq_btn, 0); 
 		local_irq_restore(irq_flags);
 		bn_irq_enable=0;
 	}
@@ -423,7 +411,7 @@ static void detection_work(struct work_struct *work)
         
 	if (gpio_get_value(AUD_PIN_HEADSET_DET) != HS_PLUG_IN) {
 		/* Headset not plugged in */
-		if ((switch_get_state(&hi->sdev) == HEADSET)||(switch_get_state(&hi->sdev) == NOMIC_HEADSET))//MM-RC-SupportNO_MIC_Hs-00*
+		if (switch_get_state(&hi->sdev) == HEADSET)
 		{
 			H2W_DBG("Headset is plugged out.\n");
 			remove_headset();
@@ -501,7 +489,7 @@ static irqreturn_t detect_irq_handler(int irq, void *dev_id)
     * then we can do headset_insertion check.
 	*/
 	if ((switch_get_state(&hi->sdev) == NO_DEVICE) ^ (value2^HS_PLUG_IN)) {//SW2-6-MM-RC-Audio_Porting-00*
-		if (switch_get_state(&hi->sdev) == HEADSET)      
+		if (switch_get_state(&hi->sdev) == HEADSET)          
 			hi->ignore_btn = 1;
 		/* Do the rest of the work in timer context */
 		hrtimer_start(&hi->timer, hi->debounce_time, HRTIMER_MODE_REL);
@@ -570,8 +558,6 @@ void headset_late_resume(struct early_suspend *h)
 //Div6-PT2-MM-SL-HS WAKE UP IN SUSPEND-00+}
 #endif
 //MM-SL-CurrentIsTooLargeInSuspend-00-}
-
-
 
 static int trout_h2w_probe(struct platform_device *pdev)
 {
@@ -727,11 +713,7 @@ static int trout_h2w_probe(struct platform_device *pdev)
  #endif
  
        // Set headset_detect pin as wake up pin
-	//SW3-MM-DL-DoNotSetIrqWakeForHS-00+{
-	#ifndef CONFIG_FIH_PROJECT_SF4Y6
 	ret = set_irq_wake(hi->irq, 1);
-	#endif
-	//SW3-MM-DL-DoNotSetIrqWakeForHS-00+}
 	if (ret < 0)
 		goto err_request_input_dev;
 
@@ -739,11 +721,7 @@ static int trout_h2w_probe(struct platform_device *pdev)
        {
        	  printk(KERN_INFO "aud:  gpio 94 is %d, enable gpio21 wake up pin\n", gpio_get_value(AUD_PIN_HEADSET_DET));
 #ifdef AUD_HOOK_BTN
-               //SW3-MM-DL-DoNotSetIrqWakeForHS-00+{
-               #ifndef CONFIG_FIH_PROJECT_SF4Y6
                ret = set_irq_wake(hi->irq_btn, 1);
-               #endif
-               //SW3-MM-DL-DoNotSetIrqWakeForHS-00+}
                if (ret < 0)
 		     goto err_request_input_dev;
 #endif

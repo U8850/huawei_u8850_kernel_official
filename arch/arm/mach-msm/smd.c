@@ -1633,9 +1633,6 @@ struct smem_oem_info
 // FIHTDC-Div2-SW2-BSP, Ming, HWID { //
     fih_hw_info_type fih_hwid_information;
 // } FIHTDC-Div2-SW2-BSP, Ming, HWID //
-//Div2-BSP-AC-CPU_Version-00+{
-	unsigned int cpu_version_number;
-//Div2-BSP-AC-CPU_Version-00+}
 };
 
 typedef enum
@@ -1652,9 +1649,7 @@ static struct smem_oem_info oem_info = {0};
 static unsigned int fih_product_id = 0;
 static unsigned int fih_product_phase = 0;
 static unsigned int fih_band_id = 0;
-//Div2-BSP-AC-CPU_Version-00+{
-static unsigned int cpu_version_information=0;
-//Div2-BSP-AC-CPU_Version-00+}
+
 //SW2-5-1-MP-DbgCfgTool-00+[
 static unsigned int msm_poweron_cause;
 module_param_named(poweron_cause, msm_poweron_cause, int, S_IRUGO);
@@ -1772,9 +1767,7 @@ void fih_get_oem_info(void)
 	fih_band_id = oem_info.fih_hwid_information.virtual_band_id;
 	printk(KERN_INFO "FIH kernel - fih_band_id = %d \r\n",fih_band_id);
   //Div252-AC-HARDWARE_ID_01+}
-    //Div2-BSP-AC-CPU_Version-00+{
-	cpu_version_information = oem_info.cpu_version_number;
-    //Div2-BSP-AC-CPU_Version-00+}
+
 } /*fih_get_oem_info*/
 EXPORT_SYMBOL(fih_get_oem_info);
 
@@ -1834,13 +1827,6 @@ unsigned int fih_get_poweroncause_info()
 	return oem_info.power_on_cause;
 }
 
-//Div2-BSP-AC-CPU_Version-00+{
-unsigned int fih_get_cpu_version_number(void)
-{
-	return cpu_version_information;
-}
-EXPORT_SYMBOL(fih_get_cpu_version_number);
-//Div2-BSP-AC-CPU_Version-00+{}
 //#endif
 
 /* Div2-SW2-BSP-FB0-BATT { */

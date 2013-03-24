@@ -56,8 +56,6 @@ struct sdiowm_dev {
 	struct rx_cxt	rx;
 
 	struct work_struct	ws;
-	struct list_head	pm_list;
-	u8	suspended;	
 };
 
 #endif // __GDM_SDIO_H__

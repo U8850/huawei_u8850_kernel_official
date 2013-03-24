@@ -635,20 +635,6 @@ void hsusb_chg_notify_over_tempearture(bool OT_flag)
     mutex_unlock(&OT_flag_lock);
 }
 EXPORT_SYMBOL(hsusb_chg_notify_over_tempearture);
-
-/* SW5, PinyCHWu, 20110715 { */
-// set partial/normal current for low-temp charging.
-void hsusb_chg_notify_low_temp_chg_current(bool partial_current)
-{
-	if (partial_current) {
-		msm_chg_usb_i_is_available(200);
-	} else {
-		msm_chg_usb_i_is_available(chg_current);
-	}
-}
-EXPORT_SYMBOL(hsusb_chg_notify_low_temp_chg_current);
-/* }, SW5, PinyCHWu, 20110715 */
-
 #endif
 /* } Div2-SW2-BSP-FBX-CHG */
 

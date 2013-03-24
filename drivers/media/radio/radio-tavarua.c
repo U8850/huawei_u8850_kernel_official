@@ -52,19 +52,10 @@
 #include <linux/mfd/marimba.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
-//@fihtdcCode@ 20101111 Godfrey
+//@fihtdcCode@ 20101111 Godfrey 
 #include <linux/gpio.h>
 
-//Dio: for fine tuning SF5/SFXG FM RSSI
-#if defined(CONFIG_FIH_PROJECT_SF4V5)
-#define TAVARUA_DEFAULT_TH  -95
-
-#elif defined(CONFIG_FIH_PROJECT_SFXG)
-#define TAVARUA_DEFAULT_TH  -95
-
-#else
 #define TAVARUA_DEFAULT_TH  -83
-#endif
 
 /*
 regional parameters for radio device
@@ -168,7 +159,7 @@ int enableGPS_FM_LNA(int bEnable)
 	uint32_t 		irqcfg;
 	int 			rc;
 
-	if(bEnable)
+	if(bEnable) 
 	{
 		if (gps_fm_lna_refcnt == 0)
 		{
@@ -495,7 +486,7 @@ static int write_to_xfr(struct tavarua_device *radio, unsigned char mode,
     if(len > XFR_REG_NUM){
         printk(KERN_ERR "%s: buffer length error.\n",__func__);
         return -1;
-    }
+    }      
 
 	memcpy(&buffer[1], buf, len);
 	/* buffer[0] corresponds to XFRCTRL register
@@ -1710,7 +1701,7 @@ static int tavarua_fops_release(struct file *file)
                                                 __func__);
                 return retval;
     }
-
+ 
 
 	/* disable fm core */
 	radio->marimba->mod_id = MARIMBA_SLAVE_ID_MARIMBA;
@@ -2604,17 +2595,12 @@ static int tavarua_vidioc_dqbuf(struct file *file, void *priv,
 	struct kfifo *data_fifo;
 	unsigned char *buf = (unsigned char *)buffer->m.userptr;
 	unsigned int len = buffer->length;
-    unsigned int len0=0, len1=0, nonecopy=0;
-    char *tbuf;
+    unsigned int len0=0, len1=0;
 
 	FMDBG("%s: requesting buffer %d\n", __func__, buf_type);
-
-    /* check if we can access the user buffer */
-    if (!access_ok(VERIFY_WRITE, buf, len))
-    {
-        return -EFAULT;
-    }
-
+	/* check if we can access the user buffer */
+	if (!access_ok(VERIFY_WRITE, buf, len))
+		return -EFAULT;
 	if ((buf_type < TAVARUA_BUF_MAX) && (buf_type >= 0)) {
 		data_fifo = radio->data_buf[buf_type];
 		if (buf_type == TAVARUA_BUF_EVENTS) {
@@ -2628,38 +2614,17 @@ static int tavarua_vidioc_dqbuf(struct file *file, void *priv,
 		return -EINVAL;
 	}
 
-	//buffer->bytesused = kfifo_get(data_fifo, buf, len);
-
-    /* +++ AlbertYCFang, 2011.04.08 +++ */
-    tbuf = kzalloc(len, GFP_KERNEL);
-    if (!tbuf)
-    {
-        FMDBG("**%s kzalloc fail!", __func__);
-        return -EFAULT;
-    }
-
+    /* +++ AlbertYCFang, 2011.03.22 +++ */
     len0 = min(len, data_fifo->in - data_fifo->out);
     len1 = min(len0, data_fifo->size - (data_fifo->out & (data_fifo->size - 1)));
 
     FMDBG("*FIFO: buffer addr = 0x%x, size = %u, in = %u, out = %u\n",
           (unsigned int)data_fifo->buffer, data_fifo->size, data_fifo->in, data_fifo->out);
+    FMDBG("*Buf addr = 0x%x, len=%u, len0 = %u, len1 = %u\n",
+          (unsigned int)buf, len, len0, len1);
+    /* --- AlbertYCFang, 2011.03.22 ---*/
 
-    FMDBG("*Buf addr = 0x%x, len=%u, len0 = %u, len1 = %u, TBuf addr = 0x%x\n",
-          (unsigned int)buf, len, len0, len1, (unsigned int)tbuf);
-
-	buffer->bytesused = kfifo_get(data_fifo, tbuf, len);
-    nonecopy = copy_to_user(buf, tbuf, buffer->bytesused);
-
-    if (nonecopy>0)
-    {
-        FMDBG("**Bytes that could not be copied = %d", nonecopy);
-    }
-
-    FMDBG("*bytesused =%d , nonecopy =%d\n", buffer->bytesused, nonecopy);
-
-    kfree(tbuf);
-    /* --- AlbertYCFang, 2011.04.08 ---*/
-
+	buffer->bytesused = kfifo_get(data_fifo, buf, len);
 	return 0;
 }
 

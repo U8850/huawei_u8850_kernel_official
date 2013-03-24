@@ -31,20 +31,16 @@
 #include <linux/irq.h>
 #include <mach/fbx_kybd.h>
 #include <mach/pmic.h>
-//MM-SL-HS WAKE UP IN SUSPEND-01-#include <linux/earlysuspend.h>  //MM-SL-HS WAKE UP IN SUSPEND-00+
+#include <linux/earlysuspend.h>  //MM-SL-HS WAKE UP IN SUSPEND-00+
 #endif
 
 struct gpio_switch_data {
 	struct switch_dev sdev;
-	//MM-SL-HS WAKE UP IN SUSPEND-01-{
 	//MM-SL-HS WAKE UP IN SUSPEND-00+{
-	/*
 	#ifdef CONFIG_FIH_FBX_AUDIO
 	struct input_dev *hs_input;
 	#endif
-	*/
 	//MM-SL-HS WAKE UP IN SUSPEND-00+}
-	//MM-SL-HS WAKE UP IN SUSPEND-01-}
 	unsigned gpio;
 	const char *name_on;
 	const char *name_off;
@@ -52,17 +48,13 @@ struct gpio_switch_data {
 	const char *state_off;
 	int irq;
 	struct work_struct work;
-	//MM-SL-HS WAKE UP IN SUSPEND-01-{
-	//MM-SL-HS WAKE UP IN SUSPEND-00+{
-	/*
+	//MM-SL-HS WAKE UP IN SUSPEND-00+{	
 	#ifdef CONFIG_FIH_FBX_AUDIO
 	#ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend es;
 	#endif
 	#endif
-	*/
 	//MM-SL-HS WAKE UP IN SUSPEND-00+}	
-	//MM-SL-HS WAKE UP IN SUSPEND-01-}
 };
 
 
@@ -70,8 +62,8 @@ struct gpio_switch_data {
 #ifdef CONFIG_FIH_FBX_AUDIO
 struct workqueue_struct *headset_switch_wq;
 bool headset_without_mic = 0;
-//MM-SL-HS WAKE UP IN SUSPEND-01-bool mSuspend = false; //MM-SL-HS WAKE UP IN SUSPEND-00+
-//MM-SL-HS WAKE UP IN SUSPEND-01#define KEY_RINGSWITCH                  184 //MM-SL-HS WAKE UP IN SUSPEND-00+
+bool mSuspend = false; //MM-SL-HS WAKE UP IN SUSPEND-00+
+#define KEY_RINGSWITCH                  184 //MM-SL-HS WAKE UP IN SUSPEND-00+
 
 void hook_switch_enable(bool bHookSwitchEnabled)
 {
@@ -113,9 +105,7 @@ static void gpio_switch_work(struct work_struct *work)
 		hook_switch_enable(false);
 		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_OFF);
 		switch_set_state(&data->sdev, state);
-		//MM-SL-HS WAKE UP IN SUSPEND-01-{
 		//MM-SL-HS WAKE UP IN SUSPEND-00+{
-		/*
 		if (mSuspend){
 			input_report_key(data->hs_input, KEY_RINGSWITCH, 1);  
 			printk("hs_in: keypress KEY_RINGSWITCH = %d\n",KEY_RINGSWITCH);			
@@ -124,14 +114,10 @@ static void gpio_switch_work(struct work_struct *work)
 			printk("hs_in: keypress KEY_RINGSWITCH = %d\n",KEY_RINGSWITCH);			
 		}
 		input_sync(data->hs_input);
-		*/
 		//MM-SL-HS WAKE UP IN SUSPEND-00+}
-		//MM-SL-HS WAKE UP IN SUSPEND-01-}
 	}else{
 		printk("Headset plug in \n");
-		//MM-SL-HS WAKE UP IN SUSPEND-01-{
 		//MM-SL-HS WAKE UP IN SUSPEND-00+{
-		/*
 		if (mSuspend){
 			input_report_key(data->hs_input, KEY_RINGSWITCH, 1);  
 			printk("hs_out: keypress KEY_RINGSWITCH = %d\n",KEY_RINGSWITCH);			
@@ -140,10 +126,8 @@ static void gpio_switch_work(struct work_struct *work)
 			printk("hs_out: keypress KEY_RINGSWITCH = %d\n",KEY_RINGSWITCH);			
 		}
 		input_sync(data->hs_input);
-		*/
-		//MM-SL-HS WAKE UP IN SUSPEND-00+}
-		//MM-SL-HS WAKE UP IN SUSPEND-01-}
-		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_PWM_TCXO); 
+		//MM-SL-HS WAKE UP IN SUSPEND-00+}		
+		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_PWM_TCXO);
 		hook_switch_enable(true);
 		if ( headset_without_mic == 0)
 			state = 1;
@@ -194,9 +178,7 @@ static ssize_t switch_gpio_print_state(struct switch_dev *sdev, char *buf)
 }
 #endif
 
-//MM-SL-HS WAKE UP IN SUSPEND-01-{
 //MM-SL-HS WAKE UP IN SUSPEND-00+{
-/*
 #ifdef CONFIG_FIH_FBX_AUDIO
 #ifdef CONFIG_HAS_EARLYSUSPEND
 void headset_early_suspend(struct early_suspend *h)
@@ -212,9 +194,7 @@ void headset_late_resume(struct early_suspend *h)
 }
 #endif
 #endif
-*/
 //MM-SL-HS WAKE UP IN SUSPEND-00+}
-//MM-SL-HS WAKE UP IN SUSPEND-01-}
 
 static int gpio_switch_probe(struct platform_device *pdev)
 {
@@ -259,9 +239,7 @@ static int gpio_switch_probe(struct platform_device *pdev)
 		printk("%s: create workque failed \n", __func__);		
 		return -EBUSY;
 	}
-	//MM-SL-HS WAKE UP IN SUSPEND-01-{
 	//MM-SL-HS WAKE UP IN SUSPEND-00+{
-	/*
 	#ifdef CONFIG_HAS_EARLYSUSPEND
 	switch_data->es.level = 0;
 	switch_data->es.suspend = headset_early_suspend;
@@ -284,10 +262,8 @@ static int gpio_switch_probe(struct platform_device *pdev)
 	if (ret < 0){	
 	printk("%s: input_register_device failed \n", __func__);  		
 	goto err_register_hs_input_dev;	
-	}
-	*/
+	}	 	
 	//MM-SL-HS WAKE UP IN SUSPEND-00+}	
-	//MM-SL-HS WAKE UP IN SUSPEND-01-}
 	#endif
 
 	switch_data->irq = gpio_to_irq(switch_data->gpio);
@@ -321,16 +297,12 @@ static int gpio_switch_probe(struct platform_device *pdev)
 	gpio_switch_work(&switch_data->work);
 
 	return 0;
-//MM-SL-HS WAKE UP IN SUSPEND-01-{	
 //MM-SL-HS WAKE UP IN SUSPEND-00+{
-/*
 #ifdef CONFIG_FIH_FBX_AUDIO
 err_register_hs_input_dev:
 	input_free_device(switch_data->hs_input);
-#endif
-*/
-//MM-SL-HS WAKE UP IN SUSPEND-00+}
-//MM-SL-HS WAKE UP IN SUSPEND-01-}
+#endif	
+//MM-SL-HS WAKE UP IN SUSPEND-00+}	
 err_request_irq:
 err_detect_irq_num_failed:
 err_set_gpio_input:

@@ -68,13 +68,8 @@ static ssize_t sf6_leds_pwm_blink_solid_store(struct device *dev,
     mutex_lock(&sf6_leds_pwm_dd->led_state_lock);
     if (on) {
         if (sf6_leds_pwm_dd->led_state[idx] != SF6_LED_BLINK) {
-//SW5-KERNEL-HL-lower_down_brightness-00*[
-#if defined(CONFIG_FIH_PROJECT_SF4Y6)
-			pm8058_pwm_lut_config(sf6_leds_pwm_dd->pwm[idx], 20000, sf6_leds_pwm_dd->duty_pct, 8, 0, 6, sf6_leds_pwm_dd->pause_lo_ms, sf6_leds_pwm_dd->pause_hi_ms, PM_PWM_BLINK);
-#else
-			pm8058_pwm_lut_config(sf6_leds_pwm_dd->pwm[idx], 20000, sf6_leds_pwm_dd->duty_pct, 8, 0, 63, sf6_leds_pwm_dd->pause_lo_ms, sf6_leds_pwm_dd->pause_hi_ms, PM_PWM_BLINK);
-#endif
-//SW5-KERNEL-HL-lower_down_brightness-00*]
+            
+            pm8058_pwm_lut_config(sf6_leds_pwm_dd->pwm[idx], 20000, sf6_leds_pwm_dd->duty_pct, 8, 0, 63, sf6_leds_pwm_dd->pause_lo_ms, sf6_leds_pwm_dd->pause_hi_ms, PM_PWM_BLINK);
             pm8058_pwm_lut_enable(sf6_leds_pwm_dd->pwm[idx], 1);
             
             sf6_leds_pwm_dd->led_state[idx] = SF6_LED_BLINK;
@@ -134,13 +129,7 @@ static void sf6_leds_pwm_led_brightness_set(struct led_classdev *led_cdev,
         if (sf6_leds_pwm_dd->led_state[idx] != SF6_LED_ON) {
         	
 		dev_info(led_cdev->dev, "Setting  IDX[%d] ON\n", idx);
-//SW5-KERNEL-HL-lower_down_brightness-00*[		
-#if defined(CONFIG_FIH_PROJECT_SF4Y6)
-		pm8058_pwm_lut_config(sf6_leds_pwm_dd->pwm[idx], 20000, sf6_leds_pwm_dd->duty_pct, 8, 0, 6, 0, 0, PM_PWM_LUT_RAMP_UP);
-#else
 		pm8058_pwm_lut_config(sf6_leds_pwm_dd->pwm[idx], 20000, sf6_leds_pwm_dd->duty_pct, 8, 0, 63, 0, 0, PM_PWM_LUT_RAMP_UP);
-#endif
-//SW5-KERNEL-HL-lower_down_brightness-00*]
 		pm8058_pwm_lut_enable(sf6_leds_pwm_dd->pwm[idx], 1);
     
 		sf6_leds_pwm_dd->led_state[idx] = SF6_LED_ON;

@@ -797,9 +797,6 @@ void broadcast_event(u32 evt_id, u32 dev_id, u32 session_id)
 		}
 
 		MM_DBG("dev_info->sessions = %08x\n", dev_info->sessions);
-//Div2-SW5-BSP-Volume Control-00+{
-        MM_INFO("Device Name= %s, Max= %d, Min= %d \n", dev_info->name, dev_info->max_voc_rx_vol[0], dev_info->min_voc_rx_vol[0]);
-//Div2-SW5-BSP-Volume Control-00+}
 
 		if ((!session_id && !(dev_info->sessions & session_mask)) ||
 			(session_id && ((dev_info->sessions & session_mask) !=

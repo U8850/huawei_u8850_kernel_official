@@ -787,16 +787,7 @@ static void __init alog_ram_console_save_old(const LogType log_type, char *dest)
 	size_t old_log_size = alog_ram_console_buffer[log_type]->size;
 	int reader_pos =  alog_ram_console_buffer[log_type]->reader_pos;
 	int start_pos = alog_ram_console_buffer[log_type]->start;
-	long int valid_value = 0;
 
-	if( (0 > old_log_size || old_log_size > alog_ram_console_buffer_size[log_type]) || 
-		(0 > reader_pos || reader_pos > alog_ram_console_buffer_size[log_type]) || 
-		(0 > start_pos || start_pos > alog_ram_console_buffer_size[log_type]) )
-	{
-		return;
-	}
-			
-	valid_value = start_pos + abs(reader_pos - start_pos) + abs(old_log_size - reader_pos);
 	if (dest == NULL) {
 		dest = kmalloc(old_log_size, GFP_KERNEL);
 		if (dest == NULL) {
@@ -809,15 +800,12 @@ static void __init alog_ram_console_save_old(const LogType log_type, char *dest)
 	alog_ram_console_old_log[log_type] = dest;
 	
 	if (old_log_size < alog_ram_console_buffer_size[log_type])
-	{	printk("(%s , %d\n)",__func__,__LINE__);
+	{
 		memcpy(alog_ram_console_old_log[log_type], alog_ram_console_buffer[log_type]->data, old_log_size);
 		alog_ram_console_old_log_size[log_type] = old_log_size;
 	}
-	else if(start_pos <= reader_pos && 
-			old_log_size == alog_ram_console_buffer_size[log_type] &&
-			valid_value == alog_ram_console_buffer_size[log_type])
+	else
 	{
-		printk("(%s , %d\n)",__func__,__LINE__);
 		memcpy(alog_ram_console_old_log[log_type], &alog_ram_console_buffer[log_type]->data[reader_pos], old_log_size - reader_pos);
 		memcpy(alog_ram_console_old_log[log_type] + old_log_size - reader_pos, alog_ram_console_buffer[log_type]->data, start_pos);
 		alog_ram_console_old_log_size[log_type] = old_log_size - reader_pos + start_pos;
@@ -1106,22 +1094,5 @@ static int __init alog_ram_console_late_init(void)
 	return 0;
 }
 
-static void __exit alog_ram_console_module_exit(void)
-{
-	int i;
-	
-	for (i=0; i<LOG_TYPE_NUM; i++)
-	{
-		if(NULL != alog_ram_console_buffer[i])
-		{
-			alog_ram_console_buffer[i]->sig = 100;
-			alog_ram_console_buffer[i]->size = 0;
-			alog_ram_console_buffer[i]->reader_pos = 0;
-			alog_ram_console_buffer[i]->start = 0;
-		}
-	}
-}
-
-module_exit(alog_ram_console_module_exit);
 module_init(alog_ram_console_module_init);
 late_initcall(alog_ram_console_late_init);

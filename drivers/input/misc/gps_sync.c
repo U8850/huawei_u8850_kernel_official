@@ -39,7 +39,6 @@ struct gps_sync
 {
 	int reference_counter; //used gps LNA/LDA counter
 	int status; //right now gps LNA/LDA status
-	int OnOff_Counter;    //Div6-D1-JL-LNA_REFERECCE_COUNTER-02
 }gps_sync;
 
 //status bit
@@ -80,58 +79,42 @@ static int gps_sync_dev_ioctl( struct inode * inodep, struct file * filep, unsig
 	switch(cmd)
 	{
 		case GPS_ON_CMD:
-			//Div6-D1-JL-LNA_REFERECCE_COUNTER-02{
-			DBG_MSG("GPS_ON_CMD.");
-			DBG_MSG("reference_counter = %d", LNA_LDO_sync.reference_counter);
-
-			LNA_LDO_sync.OnOff_Counter++;
-			DBG_MSG("OnOff_Counter = %d", LNA_LDO_sync.OnOff_Counter);
-			//Div6-D1-JL-LNA_REFERECCE_COUNTER-02}
-			
 			//Div2-SW6-LNA_REFERECCE_COUNTER++{
 			if (LNA_LDO_sync.reference_counter == 1)
 			{
-				//Div2-SW6-LNA_REFERECCE_COUNTER++}
-				LNA_LDO_sync.status &= HIGH;
-				/* FIHTDC, Div2-SW2-BSP Godfrey, FB0.B-396 */
-				enableGPS_FM_LNA(true);
-				//gpio_set_value(GPS_FM_LNA_2V8_EN, 1);
-				gpio_set_value(EXT_GPS_LNA_EN, 1);
-				//Div2-SW6-LNA_REFERECCE_COUNTER++{
-			 }
-			  //Div2-SW6-LNA_REFERECCE_COUNTER++}
+			//Div2-SW6-LNA_REFERECCE_COUNTER++}
+			LNA_LDO_sync.status &= HIGH;
+			/* FIHTDC, Div2-SW2-BSP Godfrey, FB0.B-396 */
+			enableGPS_FM_LNA(true);
+			//gpio_set_value(GPS_FM_LNA_2V8_EN, 1);
+			gpio_set_value(EXT_GPS_LNA_EN, 1);
+			//Div2-SW6-LNA_REFERECCE_COUNTER++{
+			DBG_MSG("reference_counter = %d", LNA_LDO_sync.reference_counter);
+		  }
+		  else
+		  {
+		  	DBG_MSG("reference_counter = %d", LNA_LDO_sync.reference_counter);
+		  }
+		  //Div2-SW6-LNA_REFERECCE_COUNTER++}
 			break;
 		case GPS_OFF_CMD:
-			//Div6-D1-JL-LNA_REFERECCE_COUNTER-02{
-			DBG_MSG("GPS_OFF_CMD.");
-			DBG_MSG("reference_counter = %d", LNA_LDO_sync.reference_counter);
-
-			if(LNA_LDO_sync.OnOff_Counter == 0)
-			{
-				//DBG_MSG("OnOff_Counter had been 0.");
-				DBG_MSG("OnOff_Counter had been 0, skip this command.");
-				break;
-			}
-			else
-			{
-				LNA_LDO_sync.OnOff_Counter--;
-				DBG_MSG("OnOff_Counter = %d", LNA_LDO_sync.OnOff_Counter);
-			}
-			//Div6-D1-JL-LNA_REFERECCE_COUNTER-02}
-
 			//Div2-SW6-LNA_REFERECCE_COUNTER++{
-			if (LNA_LDO_sync.reference_counter == 1)
+			if (LNA_LDO_sync.reference_counter == 0)
 			{
-				//Div2-SW6-LNA_REFERECCE_COUNTER++}
-				LNA_LDO_sync.status &= LOW;
-				/* FIHTDC, Div2-SW2-BSP Godfrey, FB0.B-396 */
-				enableGPS_FM_LNA(false);
-				//gpio_set_value(GPS_FM_LNA_2V8_EN, 0);
-				gpio_set_value(EXT_GPS_LNA_EN, 0);
-				//Div2-SW6-LNA_REFERECCE_COUNTER++{
-			  }
-			  //Div2-SW6-LNA_REFERECCE_COUNTER++}
-			
+			//Div2-SW6-LNA_REFERECCE_COUNTER++}			
+			LNA_LDO_sync.status &= LOW;
+			/* FIHTDC, Div2-SW2-BSP Godfrey, FB0.B-396 */
+			enableGPS_FM_LNA(false);
+			//gpio_set_value(GPS_FM_LNA_2V8_EN, 0);
+			gpio_set_value(EXT_GPS_LNA_EN, 0);
+			//Div2-SW6-LNA_REFERECCE_COUNTER++{
+			DBG_MSG("reference_counter = %d", LNA_LDO_sync.reference_counter);
+		  }
+		  else
+		  {
+		  	DBG_MSG("reference_counter = %d", LNA_LDO_sync.reference_counter);
+		  }
+		  //Div2-SW6-LNA_REFERECCE_COUNTER++}			
 			break;
 		default:
 			ERR_MSG("ioctl error!");
@@ -160,7 +143,6 @@ static int __init gps_sync_init(void)
 	//initialize
 	LNA_LDO_sync.status = 0;
 	LNA_LDO_sync.reference_counter= 0;
-	LNA_LDO_sync.OnOff_Counter = 0;        //Div6-D1-JL-LNA_REFERECCE_COUNTER-02
     gpio_tlmm_config(GPIO_CFG(GPS_FM_LNA_2V8_EN, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
     ret = gpio_request(GPS_FM_LNA_2V8_EN,"GPS_LDO");
     if(ret)

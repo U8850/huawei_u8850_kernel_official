@@ -764,7 +764,6 @@ static int rmt_storage_get_sync_status(void)
 }
 
 //Div2-SW2-BSP, JOE HSU ,rmt_sync
-#if 0
 int rmt_sync_call(void)
 {
 	int rc;
@@ -775,7 +774,6 @@ int rmt_sync_call(void)
 //		}
 	return rc;
 }
-#endif
 
 static int rmt_storage_mmap(struct file *file, struct vm_area_struct *vma)
 {

@@ -198,7 +198,7 @@ struct audio_mvs_cb_func_args {
 struct audio_mvs_frame_info_hdr {
 	uint32_t frame_mode;
 	uint32_t mvs_mode;
-	uint16_t buf_free_cnt; //SW3-MM-DL-QctFixKaNoise-00+
+	uint32_t buf_free_cnt;
 };
 
 struct audio_mvs_ul_reply {
@@ -220,26 +220,6 @@ struct audio_mvs_dl_cb_func_args {
 	uint32_t amr_mode;
 };
 
-//SW3-MM-DL-QctFixKaNoise-00+{
-struct param_1 {
-	uint32_t param1;
-	uint32_t param2;
-	uint32_t valid_pkt_status_ptr;
-	uint32_t pkt_status;
-};
-
-struct param_2 {
-	uint32_t param1;
-	uint32_t valid_pkt_status_ptr;
-	uint32_t pkt_status;
-};
-
-union codec_param {
-		struct param_1 arg1;
-		struct param_2 arg2;
-};
-//SW3-MM-DL-QctFixKaNoise-00+}
-
 struct audio_mvs_dl_reply {
 	struct rpc_reply_hdr reply_hdr;
 
@@ -250,16 +230,12 @@ struct audio_mvs_dl_reply {
 	uint32_t frame_mode_again;
 
 	struct audio_mvs_frame_info_hdr frame_info_hdr;
-//SW3-MM-DL-QctFixKaNoise-00+{
-/*
+
 	uint32_t param1;
 	uint32_t param2;
 
 	uint32_t valid_pkt_status_ptr;
 	uint32_t pkt_status;
-*/
-	union codec_param cdc_param;
-//SW3-MM-DL-QctFixKaNoise-00+}
 };
 
 struct audio_mvs_buf_node {
@@ -304,15 +280,12 @@ struct audio_mvs_info_type {
 };
 
 static struct audio_mvs_info_type audio_mvs_info;
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-//#ifdef CONFIG_FIH_PROJECT_SF4Y6
-//uint32_t tx_cnt = 0;
-//uint32_t rx_cnt = 0;
-//#endif
+#ifdef CONFIG_FIH_PROJECT_SF4Y6
+uint32_t tx_cnt = 0;
+uint32_t rx_cnt = 0;
+#endif
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
-
 static int audio_mvs_setup_amr(struct audio_mvs_info_type *audio)
 {
 	int rc = 0;
@@ -972,12 +945,6 @@ static void audio_mvs_process_rpc_request(uint32_t procedure,
 		struct audio_mvs_dl_reply dl_reply;
 		uint32_t frame_mode;
 		struct audio_mvs_buf_node *buf_node = NULL;
-		//SW3-MM-DL-QctFixKaNoise-00+{
-		uint32_t *pkt_status_ptr = NULL;
-		uint32_t *pkt_status = NULL;
-		uint32_t i = 0;
-		uint8_t *ptr = NULL;
-		//SW3-MM-DL-QctFixKaNoise-00+}
 
 		pr_debug("%s: MVS DL CB CB_FUNC_ID 0x%x\n",
 			 __func__, be32_to_cpu(args->cb_func_id));
@@ -999,19 +966,13 @@ static void audio_mvs_process_rpc_request(uint32_t procedure,
 
 		mutex_lock(&audio->in_lock);
 
-//SW3-MM-DL-QctFixKaNoise-00+{
-		pkt_status_ptr = &dl_reply.cdc_param.arg1.valid_pkt_status_ptr;
-		pkt_status = &dl_reply.cdc_param.arg1.pkt_status;
-		
 //SW3-MM-DL-QctSlowPatch+{
-//#ifdef CONFIG_FIH_PROJECT_SF4Y6
-//		if (!list_empty(&audio->in_queue) && (tx_cnt > rx_cnt)) {
-//#else
+#ifdef CONFIG_FIH_PROJECT_SF4Y6
+		if (!list_empty(&audio->in_queue) && (tx_cnt > rx_cnt)) {
+#else
 		if (!list_empty(&audio->in_queue)) {
-//#endif
+#endif
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
-
 			buf_node = list_first_entry(&audio->in_queue,
 						    struct audio_mvs_buf_node,
 						    list);
@@ -1021,58 +982,35 @@ static void audio_mvs_process_rpc_request(uint32_t procedure,
 			       &buf_node->frame.voc_pkt[0],
 			       buf_node->frame.len);
 
-//SW3-MM-DL-QctFixKaNoise-00+{
 			if (frame_mode == MVS_FRAME_MODE_AMR_DL) {
-				//dl_reply.param1 = cpu_to_be32(
-				dl_reply.cdc_param.arg1.param1 = cpu_to_be32(
+				dl_reply.param1 = cpu_to_be32(
 					buf_node->frame.frame_type);
-				//dl_reply.param2 = cpu_to_be32(audio->rate_type);
-				dl_reply.cdc_param.arg1.param2 = cpu_to_be32(audio->rate_type);
+				dl_reply.param2 = cpu_to_be32(audio->rate_type);
 			} else if (frame_mode == MVS_FRAME_MODE_PCM_DL) {
-				//dl_reply.param1 = 0;
-				//dl_reply.param2 = 0;
-				dl_reply.cdc_param.arg1.param1 = 0;
-				dl_reply.cdc_param.arg1.param2 = 0;
+				dl_reply.param1 = 0;
+				dl_reply.param2 = 0;
 			} else if (frame_mode == MVS_FRAME_MODE_VOC_RX) {
-				//dl_reply.param1 = cpu_to_be32(audio->rate_type);
-				//dl_reply.param2 = 0;
-				dl_reply.cdc_param.arg1.param1 = cpu_to_be32(audio->rate_type);
-				dl_reply.cdc_param.arg1.param2 = 0;
+				dl_reply.param1 = cpu_to_be32(audio->rate_type);
+				dl_reply.param2 = 0;
 //SW5-MM-DL-Add2030MvsWithG711-00+{
 			} else if (frame_mode == MVS_FRAME_MODE_G711_DL) {
-				//dl_reply.param1 = cpu_to_be32(
-				dl_reply.cdc_param.arg2.param1 = cpu_to_be32(
+				dl_reply.param1 = cpu_to_be32(
 					buf_node->frame.frame_type);
-				//dl_reply.param2 = cpu_to_be32(audio->rate_type);
-				pr_info("getting the pointers of the status\n"); //SW5-MM-DL-HideSomeUnnecessaryMessage-00+
-				pkt_status_ptr = &dl_reply.cdc_param.arg2.valid_pkt_status_ptr;
-				pkt_status = &dl_reply.cdc_param.arg2.pkt_status;
-#if 0
-				pkt_status_ptr = &((struct param_2 *)(&dl_reply.cdc_param.arg2)->valid_pkt_status_ptr);
-				pkt_status = &((struct param_2 *)(&dl_reply.cdc_param.arg2)->pkt_status);
-#endif
+				dl_reply.param2 = cpu_to_be32(audio->rate_type);
 //SW5-MM-DL-Add2030MvsWithG711-00+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 			} else {
 				pr_err("%s: DL Unknown frame mode %d\n",
 				       __func__, frame_mode);
 			}
-//SW3-MM-DL-QctFixKaNoise-00+{
-			pr_info("derefrencing the pointers\n"); //SW5-MM-DL-HideSomeUnnecessaryMessage-00+
-			*pkt_status = cpu_to_be32(AUDIO_MVS_PKT_NORMAL);
-			//dl_reply.pkt_status = cpu_to_be32(AUDIO_MVS_PKT_NORMAL);
+
+			dl_reply.pkt_status = cpu_to_be32(AUDIO_MVS_PKT_NORMAL);
 
 			list_add_tail(&buf_node->list, &audio->free_in_queue);
 		} else {
 			pr_debug("%s: No DL data available to send to MVS\n",
 				 __func__);
-			if (frame_mode == MVS_FRAME_MODE_G711_DL) {
-				pkt_status_ptr = &dl_reply.cdc_param.arg2.valid_pkt_status_ptr;
-				pkt_status = &dl_reply.cdc_param.arg2.pkt_status;
-			}
-			*pkt_status = cpu_to_be32(AUDIO_MVS_PKT_SLOW);
-			//dl_reply.pkt_status = cpu_to_be32(AUDIO_MVS_PKT_SLOW);
-//SW3-MM-DL-QctFixKaNoise-00+}
+
+			dl_reply.pkt_status = cpu_to_be32(AUDIO_MVS_PKT_SLOW);
 		}
 
 		mutex_unlock(&audio->in_lock);
@@ -1087,16 +1025,8 @@ static void audio_mvs_process_rpc_request(uint32_t procedure,
 		dl_reply.frame_info_hdr.mvs_mode = cpu_to_be32(audio->mvs_mode);
 		dl_reply.frame_info_hdr.buf_free_cnt = 0;
 
-//SW3-MM-DL-QctFixKaNoise-00+{
-		//dl_reply.valid_pkt_status_ptr = cpu_to_be32(0x00000001);
-		*pkt_status_ptr = cpu_to_be32(0x00000001);
+		dl_reply.valid_pkt_status_ptr = cpu_to_be32(0x00000001);
 
-		ptr = (uint8_t *)&dl_reply;
-		for (i = 0; i < sizeof(struct audio_mvs_dl_reply); i++) {
-			pr_info("cmd[%d] = %x\n", i, ptr[i]); //SW5-MM-DL-HideSomeUnnecessaryMessage-00+
-		}
-//SW3-MM-DL-QctFixKaNoise-00+}
-	
 		rc = msm_rpc_write(audio->rpc_endpt,
 				   &dl_reply,
 				   sizeof(dl_reply));
@@ -1478,13 +1408,11 @@ int audio_mvs_release(struct inode *inode, struct file *file)
 	audio->state = AUDIO_MVS_CLOSED;
 
 	mutex_unlock(&audio->lock);
-
-//SW3-MM-DL-QctFixKaNoise-00+{
+	
 //SW3-MM-DL-QctSlowPatch+{
-//	tx_cnt = 0;
-//	rx_cnt = 0;
+	tx_cnt = 0;
+	rx_cnt = 0;
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 
 	return 0;
 }
@@ -1536,13 +1464,11 @@ static ssize_t audio_mvs_read(struct file *file,
 
 				list_add_tail(&buf_node->list,
 					      &audio->free_out_queue);
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-//#ifdef CONFIG_FIH_PROJECT_SF4Y6
-//				tx_cnt++;
-//#endif
+#ifdef CONFIG_FIH_PROJECT_SF4Y6
+				tx_cnt++;
+#endif
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 			} else {
 				pr_err("%s: Read count %d < sizeof(frame) %d",
 				       __func__, count,
@@ -1617,11 +1543,9 @@ ssize_t audio_mvs_read_kernel(
 
 				list_add_tail(&buf_node->list,
 					      &audio->free_out_queue);
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-//				tx_cnt++;
+				tx_cnt++;
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 			} else {
 				pr_err("%s: Read count %d < sizeof(frame) %d",
 				       __func__, count,
@@ -1667,15 +1591,13 @@ static ssize_t audio_mvs_write(struct file *file,
 	mutex_lock(&audio->in_lock);
 	if (audio->state == AUDIO_MVS_STARTED) {
 		if (count <= sizeof(struct msm_audio_mvs_frame)) {
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-//#ifdef CONFIG_FIH_PROJECT_SF4Y6
-//			if (!list_empty(&audio->free_in_queue) && (tx_cnt >= rx_cnt)) {
-//#else
+#ifdef CONFIG_FIH_PROJECT_SF4Y6
+			if (!list_empty(&audio->free_in_queue) && (tx_cnt >= rx_cnt)) {
+#else
 			if (!list_empty(&audio->free_in_queue)) {
-//#endif
+#endif
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 				buf_node =
 					list_first_entry(&audio->free_in_queue,
 						struct audio_mvs_buf_node,
@@ -1688,13 +1610,11 @@ static ssize_t audio_mvs_write(struct file *file,
 
 				list_add_tail(&buf_node->list,
 					      &audio->in_queue);
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-//#ifdef CONFIG_FIH_PROJECT_SF4Y6
-//				rx_cnt++;
-//#endif
+#ifdef CONFIG_FIH_PROJECT_SF4Y6
+				rx_cnt++;
+#endif
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 			} else {
 				pr_err("%s: No free DL buffs\n", __func__);
 			}
@@ -1732,12 +1652,10 @@ ssize_t audio_mvs_write_kernel(
 	mutex_lock(&audio->in_lock);
 	if (audio->state == AUDIO_MVS_STARTED) {
 		if (count <= sizeof(struct msm_audio_mvs_frame)) {
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-			if (!list_empty(&audio->free_in_queue)) {
-			//if (!list_empty(&audio->free_in_queue) && (tx_cnt >= rx_cnt)) {
+			//if (!list_empty(&audio->free_in_queue)) {
+			if (!list_empty(&audio->free_in_queue) && (tx_cnt >= rx_cnt)) {
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 				buf_node =
 					list_first_entry(&audio->free_in_queue,
 						struct audio_mvs_buf_node,
@@ -1748,11 +1666,9 @@ ssize_t audio_mvs_write_kernel(
 				
                 list_add_tail(&buf_node->list,
 					      &audio->in_queue);
-//SW3-MM-DL-QctFixKaNoise-00+{
 //SW3-MM-DL-QctSlowPatch+{
-//				rx_cnt++;
+				rx_cnt++;
 //SW3-MM-DL-QctSlowPatch+}
-//SW3-MM-DL-QctFixKaNoise-00+}
 			} else {
 				pr_err("%s: No free DL buffs\n", __func__);
 			}

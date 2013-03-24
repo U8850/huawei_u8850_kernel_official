@@ -17,9 +17,6 @@
 #define WIMAX_RADIO_OFF			0x0004
 #define WIMAX_RADIO_ON			0x0006
 #define WIMAX_WIMAX_RESET		0x0007	/* Is this still here */
-//#ifdef CONFIG_GDM_SDIO_PM
-#define WIMAX_PM_EVENT			0x8009
-//#endif
 
 /* Category 1 */
 #define WIMAX_NET_ENTRY			0x0100

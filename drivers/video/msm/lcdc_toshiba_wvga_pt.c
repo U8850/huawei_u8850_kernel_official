@@ -1261,7 +1261,6 @@ static int lcdc_toshiba_panel_off(struct platform_device *pdev)
     	  truly_spi_write(0x1000,0x00); //Sleep in
     	  mdelay(120);
     	  truly_spi_write(0x4F00,0x01); //Deep standby mode
-    	  mdelay(120); /* Div2-SW2-BSP,JOE HSU,wait 120 msec */
      }else {
     		toshiba_spi_write(0x28, 0, 0);	/* display off */
     		mdelay(1);

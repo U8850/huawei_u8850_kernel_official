@@ -151,7 +151,7 @@ static ssize_t ftmgpio_dev_read( struct file * file, char __user * buffer, size_
 			return -EFAULT;
 		}
 		
-		printk(KERN_INFO "[ftmgpio.c] %d %d %d\n", bufferPID_tsflag[0], bufferPID_tsflag[1], bufferPID_tsflag[2]);
+		printk(KERN_INFO "[ftmgpio.c] %d %d %d", bufferPID_tsflag[0], bufferPID_tsflag[1], bufferPID_tsflag[2]);
 		
 		return 1;
 	}
@@ -366,66 +366,6 @@ static ssize_t ftmgpio_dev_read( struct file * file, char __user * buffer, size_
 		return 1;
 	}
 /* } FIHTDC, CHHsieh, FB0 FactoryInfo Set/Get */
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+{
-	else if(ioctl_operation==IOCTL_BATTERY_ID_GET)
-	{
-		memset(bufferPID_tsflag,0,16*sizeof(char));
-		proc_comm_ftm_battery_id_read((char *)bufferPID_tsflag);
-		
-		if(copy_to_user(buffer,bufferPID_tsflag,sizeof(char)*16))
-		{
-			printk( KERN_INFO "copy_to_user() fail!\n" );
-			return -EFAULT;
-		}
-		
-		printk(KERN_INFO "bufferPID_tsflag = '%s'\n",bufferPID_tsflag);
-		
-		return 1;
-	}
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+}
-/* FIHTDC, CHHsieh, Get SW Model { */
-	else if(ioctl_operation==IOCTL_SW_MODEL_GET)
-	{
-		memset(bufferPID_tsflag,0,64*sizeof(char));
-		proc_comm_version_info_read((char *)bufferPID_tsflag);
-		
-		if(copy_to_user(buffer,bufferPID_tsflag,sizeof(char)*64))
-		{
-			printk( KERN_INFO "copy_to_user() fail!\n" );
-			return -EFAULT;
-		}
-		
-		printk(KERN_INFO "bufferPID_tsflag = '0x%02x%02x%02x%02x%02x%02x%02x'\n",
-				bufferPID_tsflag[0], bufferPID_tsflag[1], bufferPID_tsflag[2], bufferPID_tsflag[3],
-				bufferPID_tsflag[4], bufferPID_tsflag[5], bufferPID_tsflag[6]);
-		
-		return 1;
-	}
-/* } FIHTDC, CHHsieh, Get SW Model */
-	else if(ioctl_operation==IOCTL_FUSE_BOOT_SET)
-	{
-		memset(bufferPID_tsflag,0,3*sizeof(char));
-		if(copy_from_user(bufferPID_tsflag,buffer,sizeof(char)*3))
-		{
-			printk( KERN_INFO "copy_from_user() fail!\n" );
-			return -EFAULT;
-		}
-		if( proc_comm_fuse_boot_set((char*)bufferPID_tsflag) != 0 ){
-			if(copy_to_user(buffer,bufferPID_tsflag,sizeof(char)*3))
-			{
-				printk( KERN_INFO "proc_comm_fuse_boot_set() and copy_to_user() fail!\n" );
-				return -EFAULT;
-			}
-			printk( KERN_INFO "proc_comm_fuse_boot_set() fail!\n" );
-			return -EFAULT;
-		}
-		if(copy_to_user(buffer,bufferPID_tsflag,sizeof(char)*3))
-		{
-			printk( KERN_INFO "copy_to_user() fail!\n" );
-			return -EFAULT;
-		}
-		return 1;
-	}
 	else
 		printk( KERN_INFO "Undefined FTM GPIO driver IOCTL command\n" );
 	
@@ -675,20 +615,6 @@ static int ftmgpio_dev_write( struct file * filp, const char __user * buffer, si
 		return 1;
 	
 	}
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+{
-	else if(ioctl_operation==IOCTL_BATTERY_ID_SET)
-	{
-		if(copy_from_user(bufferPID_tsflag,buffer,sizeof(char)*16))
-		{
-			printk( KERN_INFO "copy_from_user() fail!\n" );
-			return -EFAULT;
-		}
-		printk(KERN_INFO "===========================> ftmgpio.c IOCTL_BATTERY_ID_SET '%s'\n", bufferPID_tsflag);
-		proc_comm_ftm_battery_id_write((char*)bufferPID_tsflag);
-		return 1;
-	
-	}
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+}
 /* } FIHTDC, CHHsieh, FB0 FactoryInfo Set/Get */
 	else
 		printk( KERN_INFO "Undefined FTM GPIO driver IOCTL command\n" );
@@ -850,8 +776,10 @@ static int ftmgpio_dev_ioctl( struct inode * inode, struct file * filp, unsigned
 			break;
 /* } FIHTDC, Div2-SW2-BSP CHHsieh, NVBackup */
 		case IOCTL_FUSE_BOOT_SET:
-			ioctl_operation = cmd;
-			gpio_pin_num = arg;
+			printk(KERN_INFO "===========================> ftmgpio.c IOCTL_FUSE_BOOT_SET 2\n");
+			if( proc_comm_fuse_boot_set() != 0){
+				return -1;
+			}
 			break;
 		case IOCTL_FUSE_BOOT_GET:
 			printk(KERN_INFO "===========================> ftmgpio.c IOCTL_FUSE_BOOT_GET 2\n");
@@ -935,33 +863,16 @@ static int ftmgpio_dev_ioctl( struct inode * inode, struct file * filp, unsigned
 /* FIHTDC, CHHsieh, FB0 FactoryInfo Set/Get { */
 		case IOCTL_FACTORYINFO_GET:
 		case IOCTL_FACTORYINFO_SET:
-/* } FIHTDC, CHHsieh, FB0 FactoryInfo Set/Get */
-/* FIHTDC, CHHsieh, Get SW Model { */
-		case IOCTL_SW_MODEL_GET:
-/* } FIHTDC, CHHsieh, Get SW Model */
 			ioctl_operation = cmd;
 			gpio_pin_num = arg;			
 			break;
+/* } FIHTDC, CHHsieh, FB0 FactoryInfo Set/Get */
 		case IOCTL_CHANGE_MODEM_LPM:
 			printk(KERN_INFO "===========================> ftmgpio.c IOCTL_CHANGE_MODEM_LPM\n");
 			if( proc_comm_ftm_change_modem_lpm() != 1){
 				return -1;
 			}
 			break;
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+{
-        case IOCTL_BATTERY_ID_GET:
-			//memset(bufferPID_tsflag,0,40*sizeof(char));
-			printk(KERN_INFO "===========================> ftmgpio.c IOCTL_BATTERY_ID_GET \n");
-			//proc_comm_ftm_battery_id_read((char *)bufferPID_tsflag);
-			ioctl_operation = cmd;
-			gpio_pin_num = arg;	
-            break;
-        case IOCTL_BATTERY_ID_SET:
-            printk(KERN_INFO "===========================> ftmgpio.c IOCTL_BATTERY_ID_SET \n");
-			ioctl_operation = cmd;
-			gpio_pin_num = arg;	
-            break;
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+}
 		default:
 			printk( KERN_INFO "Undefined FTM GPIO driver IOCTL command\n" );
 			return -1;

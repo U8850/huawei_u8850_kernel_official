@@ -103,13 +103,6 @@
 #define IOCTL_FACTORYINFO_SET	56
 /* } FIHTDC, CHHsieh, FB0 FactoryInfo Set/Get */
 #define IOCTL_CHANGE_MODEM_LPM	58
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+{
-#define IOCTL_BATTERY_ID_GET	59
-#define IOCTL_BATTERY_ID_SET	60
-//Div2D5-AC-BSP-Add_baattery_ID_command-00+}
-/* FIHTDC, CHHsieh, Get SW Model { */
-#define IOCTL_SW_MODEL_GET		61
-/* } FIHTDC, CHHsieh, Get SW Model */
 
 // GPIO direction definition
 #define GPIO_IN			0

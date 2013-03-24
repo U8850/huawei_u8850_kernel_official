@@ -5,23 +5,6 @@
 
 #include "proc_comm.h"  //SW252-rexer-upld-00+
 
-//Div2-BSP-AC-CPU_Version-00+{
-#define CPU_MSM8255_0_V1 0x105720E1
-#define CPU_MSM8655_0_V1 0x105820E1
-#define CPU_MSM8255_1_V1 0x105700E1
-#define CPU_MSM8655_1_V1 0x105800E1
-#define CPU_MSM8255_0_V2 0x205720E1
-#define CPU_MSM8655_0_V2 0x205820E1
-#define CPU_MSM8255_1_V2 0x205700E1
-#define CPU_MSM8655_1_V2 0x205800E1
-#define CPU_MSM8255_0_V2_12000MHz 0x205760E1
-#define CPU_MSM8655_0_V2_12000MHz 0x205860E1
-#define CPU_MSM8255_1_V2_12000MHz 0x205740E1
-#define CPU_MSM8655_1_V2_12000MHz 0x205840E1
-#define CPU_MSM8255_0_V2_14000MHz 0x2057A0E1
-#define CPU_MSM8655_0_V2_14000MHz 0x2058A0E1
-//Div2-BSP-AC-CPU_Version-00+}
-
 static int proc_calc_metrics(char *page, char **start, off_t off,
 				 int count, int *eof, int len)
 {
@@ -108,7 +91,7 @@ static int band_read_proc(char *page, char **start, off_t off,
     }
 	len = snprintf(page, PAGE_SIZE, "%s\n",
 		ver);
-
+		
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
@@ -118,7 +101,7 @@ static int device_model_read_proc(char *page, char **start, off_t off,
 	int len;
 	int pi = fih_get_product_id();
 	char ver[24];
-
+		
 	switch (pi){
 	case Product_FB0:
 		strcpy(ver, "FB0");
@@ -128,10 +111,10 @@ static int device_model_read_proc(char *page, char **start, off_t off,
 		break;
 	case Product_FB3:
 		strcpy(ver, "FB3");
-		break;
+		break;		
 	case Product_FB1:
 		strcpy(ver, "FB1");
-		break;
+		break;			
 	case Product_SF3:
 		strcpy(ver, "SF3"); //SW2-5-1-MP-Device_Model-00*
 		break;
@@ -162,8 +145,8 @@ static int device_model_read_proc(char *page, char **start, off_t off,
 
 	len = snprintf(page, PAGE_SIZE, "%s\n",
 		ver);
-
-	return proc_calc_metrics(page, start, off, count, eof, len);
+		
+	return proc_calc_metrics(page, start, off, count, eof, len);	
 }
 
 static int baseband_read_proc(char *page, char **start, off_t off,
@@ -173,52 +156,46 @@ static int baseband_read_proc(char *page, char **start, off_t off,
 
 	int pp = fih_get_product_phase();
 	char ver[24];
-
+	
 	switch (pp){
 	case Product_PR1:
 		strcpy(ver, "PR1");
-		break;
+		break; 
 	case Product_PR2:
 		strcpy(ver, "PR2");
-		break;
+		break; 
 	case Product_PR2p5:
 		strcpy(ver, "PR2p5");
-		break;
+		break; 
 	case Product_PR230:
 		strcpy(ver, "PR230");
-		break;
+		break; 
 	case Product_PR231:
 		if (fih_get_product_id() == Product_FD1) //Div2-SW2-BSP, JOE HSU,FD1 PR235 = FB0 PR231
 				strcpy(ver, "PR235");
 			else
 		    strcpy(ver, "PR231");
-		break;
+		break; 
 	case Product_PR232:
 		strcpy(ver, "PR232");
-		break;
+		break; 
 	case Product_PR3:
 		strcpy(ver, "PR3");
 		break;
   //Div252-AC-HARDWARE_ID_01+{
 	case Product_PR1p5:
 		strcpy(ver, "PR15");
-		break;
+		break; 
   //Div252-AC-HARDWARE_ID_01+}
 	case Product_PR4:
 		strcpy(ver, "PR4");
 		break;
 	case Product_PR5:
 		strcpy(ver, "PR5");
-		break;
-	case Product_PCR:
-		strcpy(ver, "PCR");
-		break;
-	case Product_MP1:
-		strcpy(ver, "MP1");
-		break;		
+		break;  
 	case Product_EVB:
 		strcpy(ver, "EVB");
-		break;
+		break; 
 	default:
 		strcpy(ver, "Unkonwn Baseband version");
 		break;
@@ -237,28 +214,25 @@ static int emmc_read_proc(char *page, char **start, off_t off,
 	int len;
         char *pe;
 	char ver[24];
-
+	
          pe = fih_get_emmc_info();
 
 	if (strcmp(pe ,"SEM02") == 0)
-     	        strcpy(ver, "SanDisk_2G");
+     	    strcpy(ver, "SanDisk_2G");
   else if (strcmp(pe ,"M2G1D") == 0)
-            strcpy(ver, "Samsung_2G");
-//R3J438,DioChan,SFXG for Kingston 4G
-  else if (strcmp(pe ,"MMC04") == 0)
-            strcpy(ver, "Kingston_4G");
+     	      strcpy(ver, "Samsung_2G");
   else if (strcmp(pe ,"MMC02") == 0)
-     	      strcpy(ver, "Kingston_2G");
-  else if (strcmp(pe ,"SEM04") == 0)
-              strcpy(ver, "SanDisk_4G");
-  else
-	        /*strcpy(ver, "Unkonwn eMMC");*/
-	        strcpy(ver, pe);
+     	      strcpy(ver, "Kingston_2G");     	      
+	else if (strcmp(pe ,"SEM04") == 0)
+		strcpy(ver, "SanDisk_4G");      
+  else         	
+	    strcpy(ver, "Unkonwn eMMC");
+
 
 	len = snprintf(page, PAGE_SIZE, "%s\n",
 		ver);
-
-	return proc_calc_metrics(page, start, off, count, eof, len);
+		
+	return proc_calc_metrics(page, start, off, count, eof, len);	
 }
 
 static int dram_read_proc(char *page, char **start, off_t off,
@@ -267,21 +241,21 @@ static int dram_read_proc(char *page, char **start, off_t off,
 	int len;
 	int pd = fih_get_dram_info();
 	char ver[24];
-
-
+	
+ 	
 	switch (pd){
 	case 0:
 		strcpy(ver, "DDR_1G");
-		break;
+		break; 
 	case 1:
 		strcpy(ver, "DDR_2G");
-		break;
+		break; 
 	case 2:
 		strcpy(ver, "DDR_3G");
-		break;
+		break; 
 	case 3:
 		strcpy(ver, "DDR_4G");
-		break;
+		break; 
 	default:
 		strcpy(ver, "Unkonwn DRAM");
 		break;
@@ -289,8 +263,8 @@ static int dram_read_proc(char *page, char **start, off_t off,
 
 	len = snprintf(page, PAGE_SIZE, "%s\n",
 		ver);
-
-	return proc_calc_metrics(page, start, off, count, eof, len);
+		
+	return proc_calc_metrics(page, start, off, count, eof, len);	
 }
 
 //Div2-SW2-BSP, HenryMCWang, get power on cause, +++
@@ -299,13 +273,13 @@ static int poweroncause_read_proc(char *page, char **start, off_t off,
 {
 	int len;
 	char ver[24];
-
+		
 	sprintf(ver, "0x%x", fih_get_poweroncause_info());
-
+	
 	len = snprintf(page, PAGE_SIZE, "%s\n",
 		ver);
-
-	return proc_calc_metrics(page, start, off, count, eof, len);
+		
+	return proc_calc_metrics(page, start, off, count, eof, len);	
 }
 
 //Div2-SW2-BSP,JOE HSU,get_oem_info ,get memory info ,+++
@@ -325,7 +299,7 @@ static int support_sensor_read(char *page, char **start, off_t off,
 	int project_id = fih_get_product_id();
 	int phase_id = fih_get_product_phase(); //Div2D5-OwenHuang-FB0_Sensor_Proc_Read-01+
 	int project_sensor = 0;
-
+		
 	switch (project_id){
 	case Product_FB0:
 		project_sensor = DEFAULT_SUPPORT_SENSOR;
@@ -345,7 +319,6 @@ static int support_sensor_read(char *page, char **start, off_t off,
 		//Div2D5-OwenHuang-FB0_Sensor_Proc_Read-01+}
 		break;
 	case Product_SF6:
-
 		project_sensor = DEFAULT_SUPPORT_SENSOR; //DIV5-BSP-CH-SF6-SENSOR-PORTING04++
 		break;
 	case Product_SF8:
@@ -357,140 +330,39 @@ static int support_sensor_read(char *page, char **start, off_t off,
 	}
 
 	len = snprintf(page, PAGE_SIZE, "%d\n", project_sensor);
-
+		
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 //Div2D5-OwenHuang-FB0_Sensor_Proc_Read-00+}
 
-//SW252-rexer-upld-01*[
+//SW252-rexer-upld-00+[
 #ifdef CONFIG_FIH_PROJECT_SF4V5
-bool bwifi_mac=0;
-char wifi_mac[6];
-
 static int wifi_mac_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
   int len;
+  char wifi_mac[6];
 
-  if(bwifi_mac)
-  {}
-  else
-  {
-    proc_comm_ftm_wlanaddr_read(&wifi_mac[0]);
-	bwifi_mac=1;
-  }
+  proc_comm_ftm_wlanaddr_read(&wifi_mac[0]);
 
   len = snprintf(page, PAGE_SIZE, "%x:%x:%x:%x:%x:%x\n", wifi_mac[5],wifi_mac[4],wifi_mac[3],wifi_mac[2],wifi_mac[1],wifi_mac[0]);
 
-  return proc_calc_metrics(page, start, off, count, eof, len);
+  return proc_calc_metrics(page, start, off, count, eof, len);	
 }
-
-bool bproduct_id=0;
-char product_id[40];
 
 static int product_id_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
   int len;
+  char product_id[40];
 
-  if(bproduct_id)
-  {}
-  else
-  {
-    proc_comm_ftm_product_id_read((unsigned*)product_id);
-	bproduct_id=1;
-  }
+  proc_comm_ftm_product_id_read((unsigned*)product_id);
 
   len = snprintf(page, PAGE_SIZE, "%s\n", (char*)product_id);
 
-  return proc_calc_metrics(page, start, off, count, eof, len);
+  return proc_calc_metrics(page, start, off, count, eof, len);	
 }
 #endif
-//SW252-rexer-upld-01*]
-//SW252-rexer-dual_SD-00+[
-extern int dual_sd;
-static int dual_sd_read(char *page, char **start, off_t off, int count, int *eof, void *data)
-{
-  int len;
+//SW252-rexer-upld-00+]
 
-  if(dual_sd==1)
-  {
-    len = snprintf(page, PAGE_SIZE, "true\n");
-  }
-  else
-  {
-    len = snprintf(page, PAGE_SIZE, "false\n");
-  }
-
-  return proc_calc_metrics(page, start, off, count, eof, len);
-}
-//SW252-rexer-dual_SD-00+]
-
-//Div2-BSP-AC-CPU_Version-00+{
-static int cpu_read_number_proc(char *page, char **start, off_t off,
-				 int count, int *eof, void *data)
-{
-	int len,unknow_flag=0;
-
-	int pp = fih_get_cpu_version_number();
-	char ver[24];
-    switch(pp)
-    {
-        case CPU_MSM8255_0_V1:
-            strcpy(ver, "CPU:MSM8255-0 V1");
-        break;
-        case CPU_MSM8655_0_V1:
-            strcpy(ver, "CPU:MSM8655-0 V1");
-        break;
-        case CPU_MSM8255_1_V1:
-            strcpy(ver, "CPU:MSM8255-1 V1");
-        break;
-        case CPU_MSM8655_1_V1:
-            strcpy(ver, "CPU:MSM8655-1 V1");
-        break;
-        case CPU_MSM8255_0_V2:
-            strcpy(ver, "CPU:MSM8255-0 V2");
-        break;
-        case CPU_MSM8655_0_V2:
-            strcpy(ver, "CPU:MSM8655-0 V2");
-        break;
-        case CPU_MSM8255_1_V2:
-            strcpy(ver, "CPU:MSM8255-1 V2");
-        break;
-        case CPU_MSM8655_1_V2:
-            strcpy(ver, "CPU:MSM8655-1 V2");
-        break;
-        case CPU_MSM8255_0_V2_12000MHz:
-            strcpy(ver, "CPU:MSM8255-0 1.2GHz V2");
-        break;
-        case CPU_MSM8655_0_V2_12000MHz:
-            strcpy(ver, "CPU:MSM8655-0 1.2GHz V2");
-        break;
-        case CPU_MSM8255_1_V2_12000MHz:
-            strcpy(ver, "CPU:MSM8255-1 1.2GHz V2");
-        break;
-        case CPU_MSM8655_1_V2_12000MHz:
-            strcpy(ver, "CPU:MSM8655-1 1.2GHz V2");
-        break;
-        case CPU_MSM8255_0_V2_14000MHz:
-            strcpy(ver, "CPU:MSM8255-0 1.4GHz V2");
-        break;
-        case CPU_MSM8655_0_V2_14000MHz:
-            strcpy(ver, "CPU:MSM8655-0 1.4GHz V2");
-        break;
-        default:
-            unknow_flag=1;
-        break;
-    }
-    if(unknow_flag)
-    {
-        len = snprintf(page, PAGE_SIZE, "%x\n",pp);
-    }
-    else
-    {
-        len = snprintf(page, PAGE_SIZE, "%s\n",ver);
-    }
-    return proc_calc_metrics(page, start, off, count, eof, len);
-}
-//Div2-BSP-AC-CPU_Version-00+}
 
 static struct {
 		char *name;
@@ -499,7 +371,6 @@ static struct {
 	{"devmodel",	device_model_read_proc},
 	{"baseband",	baseband_read_proc},
 	{"bandinfo",	band_read_proc},
-	{"cpu_number",	cpu_read_number_proc},
     {"emmcinfo",	emmc_read_proc},
     {"draminfo",	dram_read_proc},
     {"poweroncause",	poweroncause_read_proc},
@@ -509,16 +380,15 @@ static struct {
     {"wifi_mac", wifi_mac_read},
     {"product_id",product_id_read},
     //SW252-rexer-upld-00+]
- #endif
-    {"dual_sd",dual_sd_read},  //SW252-rexer-dual_SD-00+
+ #endif	
 	{NULL,},
 };
 
 void fxx_info_init(void)
-{
+{	
 	for (p = fxx_info; p->name; p++)
 		create_proc_read_entry(p->name, 0, NULL, p->read_proc, NULL);
-
+		
 }
 EXPORT_SYMBOL(fxx_info_init);
 

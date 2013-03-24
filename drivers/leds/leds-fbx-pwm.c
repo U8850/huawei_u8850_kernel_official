@@ -26,8 +26,7 @@
 #include <mach/gpio.h>
 #include <mach/leds-fbx-pwm.h>
 
-#define PM_PWM_BLINK    	(PM_PWM_LUT_LOOP | PM_PWM_LUT_PAUSE_HI_EN | PM_PWM_LUT_PAUSE_LO_EN | PM_PWM_LUT_RAMP_UP | PM_PWM_LUT_REVERSE)
-#define PM_PWM_BLINK_ONCE	(PM_PWM_LUT_PAUSE_HI_EN | PM_PWM_LUT_PAUSE_LO_EN | PM_PWM_LUT_RAMP_UP | PM_PWM_LUT_REVERSE)
+#define PM_PWM_BLINK    (PM_PWM_LUT_LOOP | PM_PWM_LUT_PAUSE_HI_EN | PM_PWM_LUT_PAUSE_LO_EN | PM_PWM_LUT_RAMP_UP | PM_PWM_LUT_REVERSE)
 
 struct fbx_leds_pwm_driver_data {
     struct mutex led_state_lock;
@@ -38,7 +37,6 @@ struct fbx_leds_pwm_driver_data {
     int duty_pct[63];
     int pause_hi_ms;
     int pause_lo_ms;
-    int blink_once;
 };
 
 enum {
@@ -55,7 +53,6 @@ static ssize_t fbx_leds_pwm_blink_solid_store(struct device *dev,
 {
     int on;
     int idx = 0;
-    int flags = PM_PWM_BLINK;
     struct led_classdev *led_cdev = dev_get_drvdata(dev);
 
     if (!strcmp(led_cdev->name, "red"))
@@ -66,32 +63,23 @@ static ssize_t fbx_leds_pwm_blink_solid_store(struct device *dev,
         idx = FBX_CAPS_KEY_LED;
 
     sscanf(buf, "%d", &on);
-    dev_info(led_cdev->dev, "%s: IDX[%d] %s %s\n", __func__, idx, on?"BLINK":"STOP", fbx_leds_pwm_dd->blink_once?"ONCE":"");
+    dev_info(led_cdev->dev, "%s: IDX[%d] %s\n", __func__, idx, on?"BLINK":"STOP");
     
     mutex_lock(&fbx_leds_pwm_dd->led_state_lock);
     if (on) {
-		if (fbx_leds_pwm_dd->blink_once) {
-			flags = PM_PWM_BLINK_ONCE;
-			fbx_leds_pwm_dd->led_state[idx] = FBX_LED_OFF;
-		}
-	
         if (fbx_leds_pwm_dd->led_state[idx] != FBX_LED_BLINK) {
-        	pm8058_pwm_lut_config(fbx_leds_pwm_dd->pwm[idx],
-									20000,
-									fbx_leds_pwm_dd->duty_pct,
-									8,
-									0,
-									63,
-									fbx_leds_pwm_dd->pause_lo_ms,
-									fbx_leds_pwm_dd->pause_hi_ms,
-									flags
-								);
+            pm8058_pwm_lut_config(fbx_leds_pwm_dd->pwm[idx], 20000, fbx_leds_pwm_dd->duty_pct, 8, 0, 63, fbx_leds_pwm_dd->pause_lo_ms, fbx_leds_pwm_dd->pause_hi_ms, PM_PWM_BLINK);
             pm8058_pwm_lut_enable(fbx_leds_pwm_dd->pwm[idx], 1);
-			
-	        if (!fbx_leds_pwm_dd->blink_once)
-				fbx_leds_pwm_dd->led_state[idx] = FBX_LED_BLINK;
-		}
-	}
+            
+            fbx_leds_pwm_dd->led_state[idx] = FBX_LED_BLINK;
+        }
+    } else {
+        if (fbx_leds_pwm_dd->led_state[idx] == FBX_LED_BLINK) {
+            pm8058_pwm_lut_enable(fbx_leds_pwm_dd->pwm[idx], 0);
+            
+            fbx_leds_pwm_dd->led_state[idx] = FBX_LED_OFF;
+        }
+    }
     mutex_unlock(&fbx_leds_pwm_dd->led_state_lock);
 
     return size;
@@ -103,9 +91,7 @@ static ssize_t fbx_leds_pwm_pause_hi_ms_store(struct device *dev,
                      struct device_attribute *attr,
                      const char *buf, size_t size)
 {
-    mutex_lock(&fbx_leds_pwm_dd->led_state_lock);
     sscanf(buf, "%d", &fbx_leds_pwm_dd->pause_hi_ms);
-    mutex_unlock(&fbx_leds_pwm_dd->led_state_lock);
     dev_info(dev, "%s: Pause HI %d ms\n", __func__, fbx_leds_pwm_dd->pause_hi_ms);
 
     return size;
@@ -117,9 +103,7 @@ static ssize_t fbx_leds_pwm_pause_lo_ms_store(struct device *dev,
                      struct device_attribute *attr,
                      const char *buf, size_t size)
 {
-    mutex_lock(&fbx_leds_pwm_dd->led_state_lock);
     sscanf(buf, "%d", &fbx_leds_pwm_dd->pause_lo_ms);
-    mutex_unlock(&fbx_leds_pwm_dd->led_state_lock);
     dev_info(dev, "%s: Pause LO %d ms\n", __func__, fbx_leds_pwm_dd->pause_lo_ms);
 
     return size;
@@ -127,22 +111,8 @@ static ssize_t fbx_leds_pwm_pause_lo_ms_store(struct device *dev,
 
 static DEVICE_ATTR(ledoff, 0644, NULL, fbx_leds_pwm_pause_lo_ms_store);
 
-static ssize_t fbx_leds_pwm_blink_once_store(struct device *dev,
-                     struct device_attribute *attr,
-                     const char *buf, size_t size)
-{
-    mutex_lock(&fbx_leds_pwm_dd->led_state_lock);
-    sscanf(buf, "%d", &fbx_leds_pwm_dd->blink_once);
-    mutex_unlock(&fbx_leds_pwm_dd->led_state_lock);
-    dev_info(dev, "%s: Blink once\n", __func__);
-
-    return size;
-}
-
-static DEVICE_ATTR(blink_once, 0644, NULL, fbx_leds_pwm_blink_once_store);
-
 static void fbx_leds_pwm_led_brightness_set(struct led_classdev *led_cdev,
-                   enum led_brightness brightness)
+                   enum led_brightness brightness)	
 {
     int idx = 0;
     
@@ -153,27 +123,27 @@ static void fbx_leds_pwm_led_brightness_set(struct led_classdev *led_cdev,
     else if (!strcmp(led_cdev->name, "button-backlight"))
         idx = FBX_CAPS_KEY_LED;
 
-    dev_info(led_cdev->dev, "%s: IDX[%d] %s\n", __func__, idx, brightness?"ON":"OFF");
+    dev_info(led_cdev->dev, "%s: IDX[%d] %s %d\n", __func__, idx, brightness?"ON":"OFF", brightness);
 
     mutex_lock(&fbx_leds_pwm_dd->led_state_lock);
     if (brightness) {
         if (fbx_leds_pwm_dd->led_state[idx] != FBX_LED_ON) {
             if (idx == FBX_CAPS_KEY_LED) {                
-                pwm_config(fbx_leds_pwm_dd->pwm[idx], 20000, 20000);
+/*
+ * KD 2011-10-13
+ * Oh do come on.  This board supports PWM brightness and the wonderful
+ * people at Foxconn didn't bother with simple division?  Give me a f*ing 
+ * break.  Fixed so you can CHOOSE how bright your keypad LED is.
+ * 255 * 78 = approximately the previous 20000 value, 0 = 0, otherwise
+ * proportional.  Note that we have to 
+ */
+//              pwm_config(fbx_leds_pwm_dd->pwm[idx], 20000, 20000);
+                pwm_config(fbx_leds_pwm_dd->pwm[idx], (brightness * 78), 20000);
                 pwm_enable(fbx_leds_pwm_dd->pwm[idx]);
             } else {
-           		pm8058_pwm_lut_config(fbx_leds_pwm_dd->pwm[idx],
-										20000,
-										fbx_leds_pwm_dd->duty_pct,
-										8,
-										0,
-										63,
-										0,
-										0,
-										PM_PWM_LUT_RAMP_UP
-									);
+                pm8058_pwm_lut_config(fbx_leds_pwm_dd->pwm[idx], 20000, fbx_leds_pwm_dd->duty_pct, 8, 0, 63, 0, 0, PM_PWM_LUT_RAMP_UP);
                 pm8058_pwm_lut_enable(fbx_leds_pwm_dd->pwm[idx], 1);
-            }			
+            }
             fbx_leds_pwm_dd->led_state[idx] = FBX_LED_ON;
         }
     } else {
@@ -181,6 +151,7 @@ static void fbx_leds_pwm_led_brightness_set(struct led_classdev *led_cdev,
             pwm_disable(fbx_leds_pwm_dd->pwm[idx]);
         else
             pm8058_pwm_lut_enable(fbx_leds_pwm_dd->pwm[idx], 0);
+
         fbx_leds_pwm_dd->led_state[idx] = FBX_LED_OFF;
     }
     mutex_unlock(&fbx_leds_pwm_dd->led_state_lock);
@@ -206,7 +177,6 @@ static int fbx_leds_pwm_probe(struct platform_device *pdev)
     fbx_leds_pwm_dd->leds[FBX_CAPS_KEY_LED].name    = "button-backlight";
     fbx_leds_pwm_dd->pause_lo_ms = 2000;
     fbx_leds_pwm_dd->pause_hi_ms = 500;
-    fbx_leds_pwm_dd->blink_once	 = 0;
     mutex_init(&fbx_leds_pwm_dd->led_state_lock);
    
     mutex_lock(&fbx_leds_pwm_dd->led_state_lock);
@@ -256,13 +226,6 @@ static int fbx_leds_pwm_probe(struct platform_device *pdev)
         goto err_out_attr_ledoff;
     }
     
-    ret = device_create_file(&pdev->dev, &dev_attr_blink_once);
-    if (ret) {
-        dev_err(&pdev->dev,
-               "%s: create dev_attr_blink_once failed\n", __func__);
-        goto err_out_attr_blink_once;
-    }
-    
     dev_set_drvdata(&pdev->dev, fbx_leds_pwm_dd);
     
     fbx_leds_pwm_dd->pwm[0] = pwm_request(LPG_LED_DRV0, "red");
@@ -288,10 +251,7 @@ static int fbx_leds_pwm_probe(struct platform_device *pdev)
     return 0;
     
 err_out_pwm_request:
-    device_remove_file(&pdev->dev, &dev_attr_blink_once);
-    
-err_out_attr_blink_once:
-    device_remove_file(&pdev->dev, &dev_attr_ledoff);	
+    device_remove_file(&pdev->dev, &dev_attr_ledoff);
         
 err_out_attr_ledoff:
     device_remove_file(&pdev->dev, &dev_attr_ledon);

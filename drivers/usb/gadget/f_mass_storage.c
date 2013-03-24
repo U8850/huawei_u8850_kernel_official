@@ -87,11 +87,6 @@
 
 #define BULK_BUFFER_SIZE           16384
 
-//Div2D5-LC-BSP-Remove_SF5_DualSD_Flag-00 *[
-/* flush after every 4 meg of writes to avoid excessive block level caching */
-#define MAX_UNFLUSHED_BYTES (4 * 1024 * 1024)
-//Div2D5-LC-BSP-Remove_SF5_DualSD_Flag-00 *]
-
 /*-------------------------------------------------------------------------*/
 
 #define DRIVER_NAME		"usb_mass_storage"
@@ -273,7 +268,6 @@ struct lun {
 	struct file	*filp;
 	loff_t		file_length;
 	loff_t		num_sectors;
-	unsigned int unflushed_bytes;    //Div2D5-LC-BSP-Fix_DualSD_SF5.B-2658 +
 
 	unsigned int	ro : 1;
 	unsigned int	prevent_medium_removal : 1;
@@ -446,7 +440,7 @@ static struct fsg_dev			*the_fsg;
 
 static void	close_backing_file(struct fsg_dev *fsg, struct lun *curlun);
 static void	close_all_backing_files(struct fsg_dev *fsg);
-static int fsync_sub(struct lun *curlun);    //Div2D5-LC-BSP-Fix_DualSD_SF5.B-2658 +
+
 
 /*-------------------------------------------------------------------------*/
 
@@ -1166,14 +1160,6 @@ static int do_write(struct fsg_dev *fsg)
 			file_offset += nwritten;
 			amount_left_to_write -= nwritten;
 			fsg->residue -= nwritten;
-
-                     //Div2D5-LC-BSP-Remove_SF5_DualSD_Flag-00 *[
-			curlun->unflushed_bytes += nwritten;
-			if (curlun->unflushed_bytes >= MAX_UNFLUSHED_BYTES) {
-			        fsync_sub(curlun);
-			        curlun->unflushed_bytes = 0;
-			}
-                     //Div2D5-LC-BSP-Remove_SF5_DualSD_Flag-00 *]
 
 			/* If an error occurred, report it and its position */
 			if (nwritten < amount) {
@@ -2119,11 +2105,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 	VDBG(fsg, "SCSI command: %s;  Dc=%d, D%c=%u;  Hc=%d%s\n",
 			name, cmnd_size, dirletter[(int) data_dir],
 			fsg->data_size_from_cmnd, fsg->cmnd_size, hdlen);
-	#ifdef CONFIG_FIH_PROJECT_SF4Y6
-	printk(KERN_INFO "SCSI command: %s;  Dc=%d, D%c=%u;  Hc=%d%s\n",
-			name, cmnd_size, dirletter[(int) data_dir],
-			fsg->data_size_from_cmnd, fsg->cmnd_size, hdlen);
-	#endif
 
 	/* We can't reply at all until we know the correct data direction
 	 * and size. */
@@ -2140,9 +2121,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 			 * Carry out the command, but only transfer as much
 			 * as we are allowed. */
 			DBG(fsg, "phase error 1\n");
-			#ifdef CONFIG_FIH_PROJECT_SF4Y6
-			printk(KERN_INFO "phase error 1\n");
-			#endif
 			fsg->data_size_from_cmnd = fsg->data_size;
 			fsg->phase_error = 1;
 		}
@@ -2153,45 +2131,12 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 	if (fsg->data_dir != data_dir && fsg->data_size_from_cmnd > 0) {
 		fsg->phase_error = 1;
 		DBG(fsg, "phase error 2\n");
-		#ifdef CONFIG_FIH_PROJECT_SF4Y6
-		printk(KERN_INFO "phase error 2\n");
-		#endif
 		return -EINVAL;
 	}
 
-/* FIHTDC, Div2-SW2-BSP, Penho, SH4H8.B-867 { */
-#if 1
 	/* Verify the length of the command itself */
 	if (cmnd_size != fsg->cmnd_size) {
 
-		/* Special case workaround: There are plenty of buggy SCSI
-		 * implementations. Many have issues with cbw->Length
-		 * field passing a wrong command size. For those cases we
-		 * always try to work around the problem by using the length
-		 * sent by the host side provided it is at least as large
-		 * as the correct command length.
-		 * Examples of such cases would be MS-Windows, which issues
-		 * REQUEST SENSE with cbw->Length == 12 where it should
-		 * be 6, and xbox360 issuing INQUIRY, TEST UNIT READY and
-		 * REQUEST SENSE with cbw->Length == 10 where it should
-		 * be 6 as well.
-		 */
-		if (cmnd_size <= fsg->cmnd_size) {
-			DBG(fsg, "%s is buggy! Expected length %d "
-			    "but we got %d\n", name,
-			    cmnd_size, fsg->cmnd_size);
-			cmnd_size = fsg->cmnd_size;
-		} else {
-			fsg->phase_error = 1;
-			return -EINVAL;
-		}
-	}
-#else
-	/* Verify the length of the command itself */
-	if (cmnd_size != fsg->cmnd_size) {
-	#ifdef CONFIG_FIH_PROJECT_SF4Y6
-	printk(KERN_INFO "SCSI command: fsg->cmnd[0]=%d fsg->cmnd_size=%d\n",fsg->cmnd[0],fsg->cmnd_size);
-	#endif
 		/* Special case workaround: MS-Windows issues REQUEST SENSE/
 		 * INQUIRY with cbw->Length == 12 (it should be 6). */
 		//Div2-5-3-Peripheral-LL-SCSI-00*{
@@ -2202,16 +2147,11 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 		 || (fsg->cmnd[0] == SC_READ_TOC && fsg->cmnd_size == 12))
 			cmnd_size = fsg->cmnd_size;
 		else {
-			#ifdef CONFIG_FIH_PROJECT_SF4Y6
-			printk(KERN_INFO "phase error 1 return\n");
-			#endif
 			fsg->phase_error = 1;
 			return -EINVAL;
 		}
 		//Div2-5-3-Peripheral-LL-SCSI-00*}
 	}
-#endif
-/* } FIHTDC, Div2-SW2-BSP, Penho, SH4H8.B-867 */
 
 	/* Check that the LUN values are consistent */
 	if (fsg->lun != lun)
@@ -2226,9 +2166,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 			curlun->sense_data = SS_NO_SENSE;
 			curlun->sense_data_info = 0;
 			curlun->info_valid = 0;
-			#ifdef CONFIG_FIH_PROJECT_SF4Y6
-			printk(KERN_INFO "sense_data = SS_NO_SENSE\n");
-			#endif
 		}
 	} else {
 		fsg->curlun = curlun = NULL;
@@ -2252,9 +2189,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 			fsg->cmnd[0] != SC_READ_NV &&
 			fsg->cmnd[0] != SC_READ_BATTERY) {
 			DBG(fsg, "unsupported LUN %d\n", fsg->lun);
-			#ifdef CONFIG_FIH_PROJECT_SF4Y6
-			printk(KERN_INFO "unsupported LUN %d\n", fsg->lun);
-			#endif
 			return -EINVAL;
 		}
         //Div6-D1-JL-UsbPorting-00+}
@@ -2272,9 +2206,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 		return -EINVAL;
 	}
     #endif
-	#ifdef CONFIG_FIH_PROJECT_SF4Y6
-	printk(KERN_INFO "fsg->lun= %d\n", fsg->lun);
-	#endif
     if(fsg->lun == 0 || fsg->lun == 2){    //Div2D5-LC-BSP-Implement_Dual_SD_Card-00 *
 		if (curlun && curlun->unit_attention_data != SS_NO_SENSE &&
 			fsg->cmnd[0] != SC_INQUIRY &&
@@ -2286,9 +2217,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 			fsg->cmnd[0] !=SC_READ_BATTERY) {
 			curlun->sense_data = curlun->unit_attention_data;
 			curlun->unit_attention_data = SS_NO_SENSE;
-			#ifdef CONFIG_FIH_PROJECT_SF4Y6
-			printk(KERN_INFO "unit_attention_data = SS_NO_SENSE\n");
-			#endif
 			return -EINVAL;
 		}
 	}
@@ -2314,9 +2242,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 			if (curlun)
 				curlun->sense_data = SS_INVALID_FIELD_IN_CDB;
 			DBG(fsg, "SS_INVALID_FIELD_IN_CDB\n");
-			#ifdef CONFIG_FIH_PROJECT_SF4Y6
-			printk(KERN_INFO "SS_INVALID_FIELD_IN_CDB\n");
-			#endif
 			return -EINVAL;
 		}
 	}
@@ -2337,9 +2262,6 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 	if (curlun && !backing_file_is_open(curlun) && needs_medium) {
 		curlun->sense_data = SS_MEDIUM_NOT_PRESENT;
 		DBG(fsg, "SS_MEDIUM_NOT_PRESENT\n");
-		#ifdef CONFIG_FIH_PROJECT_SF4Y6
-		printk(KERN_INFO "SS_MEDIUM_NOT_PRESENT\n");
-		#endif
 		return -EINVAL;
 	}
 	}
@@ -2384,23 +2306,6 @@ static int do_switch_status(struct fsg_dev *fsg, struct fsg_buffhd *bh)
 		sprintf(buf , offline);
 	}
 	return 36;
-}
-
-static int do_switch_adb(struct fsg_dev *common, struct fsg_buffhd *bh, int enable)
-{
-	char buffer[32];
-	char *argv[] = {buffer, "adbd", NULL};
-	int ret;
-
-	snprintf (buffer, sizeof(buffer), "/system/bin/%s", enable?"start":"stop");
-
-	memset (bh->buf, 0, common->data_size_from_cmnd);
-
-	ret = call_usermodehelper (argv[0], argv, NULL, UMH_NO_WAIT);
-	if (ret < 0) {
-		printk (KERN_ERR "%s call_usermodehelper return %d", __func__, ret);
-	}
-	return common->data_size_from_cmnd;
 }
 
 //Div6-D1-JL-UsbPorting-00+}
@@ -2697,17 +2602,6 @@ static int do_scsi_command(struct fsg_dev *fsg)
     case SC_SWITCH_PORT:
         USBDBG("SC_SWITCH_PORT");
         //usb_chg_pid(true);
-        if ((fsg->cmnd[1] == 'F') && (fsg->cmnd[2] == 'I')) {
-			switch (fsg->cmnd[3]) {
-			case '0':
-			case '1':
-				reply = do_switch_adb(fsg, bh, fsg->cmnd[3] - '0');
-				break;
-			default:
-				reply = 0;
-				break;
-			}
-        }
         break;
 
     case SC_READ_BATTERY:
@@ -3327,7 +3221,6 @@ static int open_backing_file(struct fsg_dev *fsg, struct lun *curlun,
 	curlun->ro = ro;
 	curlun->filp = filp;
 	curlun->file_length = size;
-	curlun->unflushed_bytes = 0;    //Div2D5-LC-BSP-Fix_DualSD_SF5.B-2658 +
 	curlun->num_sectors = num_sectors;
 	LDBG(curlun, "open backing file: %s size: %lld num_sectors: %lld\n",
 			filename, size, num_sectors);

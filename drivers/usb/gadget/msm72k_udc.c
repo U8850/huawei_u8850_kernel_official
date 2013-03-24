@@ -50,7 +50,6 @@
 #include "../../../arch/arm/mach-msm/proc_comm.h"
 #include <mach/msm_smd.h>
 #include "../../../arch/arm/mach-msm/smd_private.h"
-#include <mach/rpc_pmapp.h>
 
 enum fih_usb_connect{
 	USB_DISCONNECTED = 0,
@@ -60,6 +59,10 @@ enum fih_usb_connect{
 	USB_SWITCH_TO_NORMAL,	// Switch to 0xc001
 	USB_SWITCH_TO_ETHERNET,	// Switch to 0xc003, but not supported in SA.
 };
+
+static struct timer_list fih_detect_charger_timer;
+static int fih_charger_connect_detected;
+static void fih_detect_charger_timer_callback( unsigned long data );
 
 bool Dynamic_switch=false;
 int USB_Connect=0;
@@ -256,9 +259,6 @@ static int msm72k_pullup_internal(struct usb_gadget *_gadget, int is_active);
 static int msm72k_set_halt(struct usb_ep *_ep, int value);
 static void flush_endpoint(struct msm_endpoint *ept);
 static void usb_reset(struct usb_info *ui);
-
-void msm_reset_usb_udc(void);    //Div6-D1-JL-AddUSBDbgInfo+
-
 static unsigned ulpi_read(struct usb_info *ui, unsigned reg)
 {
 	unsigned ret, timeout = 100000;
@@ -468,6 +468,7 @@ static void usb_chg_stop(struct work_struct *w)
 		otg_set_power(ui->xceiv, 0);
 }
 
+extern int fih_bluetooth_status;
 static void usb_chg_detect(struct work_struct *w)
 {
 	struct usb_info *ui = container_of(w, struct usb_info, chg_det.work);
@@ -499,7 +500,9 @@ static void usb_chg_detect(struct work_struct *w)
 	 * */
 	if (temp == USB_CHG_TYPE__WALLCHARGER) {
 		pm_runtime_put_sync(&ui->pdev->dev);
-		wake_unlock(&ui->wlock);
+		setup_timer( &fih_detect_charger_timer, fih_detect_charger_timer_callback, 0 );
+		mod_timer( &fih_detect_charger_timer, jiffies + msecs_to_jiffies(1000) ); //1 seconds
+		//wake_unlock(&ui->wlock);
 	}
 }
 
@@ -1112,59 +1115,6 @@ static void handle_endpoint(struct usb_info *ui, unsigned bit)
 	spin_unlock_irqrestore(&ui->lock, flags);
 }
 
-#ifdef CONFIG_CONSOLE_POLL
-int usb_loop_poll_hw(struct usb_ep *_ept, int is_rx)
-{
-
-  struct msm_endpoint *act_ept, *ept = to_msm_endpoint(_ept);
-  struct usb_info *ui = ept->ui;
-  int done = 0;
-  u32 n;
-
-  /* Normally there is a read request in the endpoint, wait for new data */
-  for (;;) {
-    n = readl(USB_USBSTS);
-    writel(n, USB_USBSTS);
-    if (n & STS_UI) /* finished transaction */
-      break;
-  }
-
-  /* USB Transaction is complete */
-  if (n & STS_UI) {
-    n = readl(USB_ENDPTSETUPSTAT);
-    if (n & EPT_RX(0))
-      handle_setup(ui);
-
-    n = readl(USB_ENDPTCOMPLETE);
-    writel(n, USB_ENDPTCOMPLETE);
-
-    while (n) {
-      unsigned bit = __ffs(n);
-      act_ept = ui->ept + bit;
-      if (ept == act_ept) {
-        pr_debug("%s: recv'd right tx %d\n", __func__, bit);
-        done = 1;
-      }
-      else {
-        pr_debug("%s: recv'd extra tx from ept %d (exp %d)\n",
-            __func__, bit, ept->bit);
-      }
-      /* always call the handler for KGDB and other usb functions. 
-       * this is to avoid hardware timeout, but can leave a bit 
-       * kernel code running when kgdb is invoked to stopped the 
-       * kernel. this works quite well with adb but might not 
-       * support usb mass storage devices very well.
-       */
-      handle_endpoint(ui, bit);
-      n = n & (~(1 << bit));
-    }
-  }
-  return done ? 0 : -EAGAIN;
-}
-#endif /* CONFIG_CONSOLE_POLL */
-
-
-
 static void flush_endpoint_hw(struct usb_info *ui, unsigned bits)
 {
 	/* flush endpoint, canceling transactions
@@ -1469,54 +1419,6 @@ static void usb_reset(struct usb_info *ui)
 	atomic_set(&ui->running, 1);
 }
 
-//Div6-D1-JL-AddUSBDbgInfo+{
-void msm_reset_usb_udc(void)
-{
-    struct usb_info *ui = the_usb_info;
-	struct msm_otg *otg = to_msm_otg(ui->xceiv);
-	
-	dev_dbg(&ui->pdev->dev, "reset controller\n");
-
-	atomic_set(&ui->running, 0);
-
-	/*
-	 * PHY reset takes minimum 100 msec. Hence reset only link
-	 * during HNP. Reset PHY and link in B-peripheral mode.
-	 */
-	#if 1//SW2-5-3-LL-Peripheral-Tethering_RNDIS-00+
-	if (ui->gadget.is_a_peripheral)
-		otg->reset(ui->xceiv, 0);
-	else
-		otg->reset(ui->xceiv, 1);
-	#endif
-	//otg->reset(ui->xceiv, 0);//SW2-5-3-LL-Peripheral-Tethering_RNDIS-00+ always peripheral mode to avoid do phy_clk_reset that will trigger usb interrupt
-
-	/* set usb controller interrupt threshold to zero*/
-	writel((readl(USB_USBCMD) & ~USBCMD_ITC_MASK) | USBCMD_ITC(0),
-							USB_USBCMD);
-
-	writel(ui->dma, USB_ENDPOINTLISTADDR);
-
-	configure_endpoints(ui);
-
-	/* marking us offline will cause ept queue attempts to fail */
-	atomic_set(&ui->configured, 0);
-
-	/* terminate any pending transactions */
-	flush_all_endpoints(ui);
-
-	if (ui->driver) {
-		dev_dbg(&ui->pdev->dev, "usb: notify offline\n");
-		ui->driver->disconnect(&ui->gadget);
-	}
-
-	/* enable interrupts */
-	writel(STS_URI | STS_SLI | STS_UI | STS_PCI, USB_USBINTR);
-
-	atomic_set(&ui->running, 1);
-}
-//Div6-D1-JL-AddUSBDbgInfo+}
-
 static void usb_start(struct usb_info *ui)
 {
 	unsigned long flags;
@@ -1554,16 +1456,6 @@ static void usb_do_work_check_vbus(struct usb_info *ui)
 	else
 		ui->flags |= USB_FLAG_VBUS_OFFLINE;
 	spin_unlock_irqrestore(&ui->lock, iflags);
-	
-	/* Div2-SW2-BSP-CHG { */
-	if (is_usb_online(ui)) {
-		dev_info(&ui->pdev->dev, "vote A0 clock on\n");
-		pmapp_clock_vote("CHRG", PMAPP_CLOCK_ID_A0, PMAPP_CLOCK_VOTE_ON); //vote A0 clock on
-	} else {
-		dev_info(&ui->pdev->dev, "vote A0 clock off\n");
-		pmapp_clock_vote("CHRG", PMAPP_CLOCK_ID_A0, PMAPP_CLOCK_VOTE_OFF); //vote A0 clock off
-	}
-	/* } Div2-SW2-BSP-CHG */
 }
 
 static void usb_do_work(struct work_struct *w)
@@ -2212,6 +2104,33 @@ static int msm72k_get_frame(struct usb_gadget *_gadget)
 	return (readl(USB_FRINDEX) >> 3) & 0x000007FF;
 }
 
+static void fih_detect_charger_timer_callback( unsigned long data )
+{
+	struct usb_info *ui = the_usb_info;
+	struct msm_otg *otg = to_msm_otg(ui->xceiv);
+
+	if (!ui) {
+		pr_err("%s called before driver initialized\n", __func__);
+		return;
+	}
+
+	//printk(KERN_INFO "%s:%ld ui->usb_state=%d, ui->state=%d\n", __FUNCTION__, jiffies, ui->usb_state, ui->state);
+
+	// If charger is not connected before the timer expired
+	if (atomic_read(&otg->chg_type) == USB_CHG_TYPE__WALLCHARGER)
+	{
+		//printk(KERN_INFO "%s: %ld: Wall Charger Detected \n", __FUNCTION__, jiffies);
+		wake_lock(&ui->wlock);
+		msm_hsusb_set_vbus_state(1);
+		mod_timer( &fih_detect_charger_timer, jiffies + msecs_to_jiffies(1000) ); //1 seconds
+	}
+	else 
+	{
+		//printk(KERN_INFO "%s: %ld: Wall Charger NOT Detected \n", __FUNCTION__, jiffies);
+		del_timer( &fih_detect_charger_timer );
+	}
+}
+
 /* VBUS reporting logically comes from a transceiver */
 static int msm72k_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
 {
@@ -2221,7 +2140,8 @@ static int msm72k_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
 	if (is_active || atomic_read(&otg->chg_type)
 					 == USB_CHG_TYPE__WALLCHARGER)
 	{
-		printk(KERN_INFO "msm72k_udc_vbus_session: detect charger.\n");//Div2-3-5-Peripheral-LL-UsbPorting-01+
+		fih_charger_connect_detected = 1;
+		printk(KERN_INFO "msm72k_udc_vbus_session: detect Wall Charger.\n");//Div2-3-5-Peripheral-LL-UsbPorting-01+
 		wake_lock(&ui->wlock);
 	}
 
@@ -2446,7 +2366,7 @@ static ssize_t show_usb_chg_type(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR(wakeup, S_IWUSR, 0, usb_remote_wakeup);
-static DEVICE_ATTR(usb_state, S_IRUGO, show_usb_state, 0);
+static DEVICE_ATTR(usb_state, S_IRUSR, show_usb_state, 0);
 static DEVICE_ATTR(usb_speed, S_IRUSR, show_usb_speed, 0);
 static DEVICE_ATTR(chg_type, S_IRUSR, show_usb_chg_type, 0);
 static DEVICE_ATTR(chg_current, S_IWUSR | S_IRUSR,
@@ -2513,6 +2433,7 @@ static int msm72k_probe(struct platform_device *pdev)
 	struct msm_otg *otg;
 	int retval;
 
+	fih_charger_connect_detected = 0;
 	dev_dbg(&pdev->dev, "msm72k_probe\n");
 	ui = kzalloc(sizeof(struct usb_info), GFP_KERNEL);
 	if (!ui)
@@ -2588,6 +2509,11 @@ static int msm72k_probe(struct platform_device *pdev)
 	/* Setup phy stuck timer */
 	if (ui->pdata && ui->pdata->is_phy_status_timer_on)
 		setup_timer(&phy_status_timer, usb_phy_status_check_timer, 0);
+
+	setup_timer( &fih_detect_charger_timer, fih_detect_charger_timer_callback, 0 );
+	retval = mod_timer( &fih_detect_charger_timer, jiffies + msecs_to_jiffies(1000) ); //1 seconds
+	if (retval) printk("%s: Error in mod_timer\n", __FUNCTION__);
+
 	return 0;
 }
 

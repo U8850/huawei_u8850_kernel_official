@@ -227,19 +227,9 @@ static int32_t hm0356_i2c_txdata(unsigned short saddr,
         },
     };
 
-    if (i2c_transfer(hm0356_client->adapter, msg, 1) < 0) {
-        printk(KERN_ERR "hm0356_msg: hm0356_i2c_txdata failed, try again!\n");
-        msleep(500);
-        printk(KERN_ERR "hm0356_msg: delay 0.5s to retry i2c.\n");
-        if (i2c_transfer(hm0356_client->adapter, msg, 1) < 0) {
-            printk(KERN_ERR "hm0356_msg: hm0356_i2c_txdata failed twice, try again.\n");
-            msleep(500);
-            printk(KERN_ERR "hm0356_msg: delay 0.5s to retry i2c.\n");
-            if (i2c_transfer(hm0356_client->adapter, msg, 1) < 0) {
-                printk(KERN_ERR "hm0356_msg: hm0356_i2c_txdata failed.\n");
-                return -EIO;
-            }
-        }
+    if (i2c_transfer(hm0356_client->adapter, msg, 1) < 0){
+        printk(KERN_ERR "hm0356_msg: hm0356_i2c_txdata failed\n");
+        return -EIO;
     }
 
     return 0;
@@ -307,12 +297,19 @@ static long hm0356_reg_init(void)
     long rc = 0;
 
     rc = hm0356_i2c_write_table(&hm0356_regs.inittbl[0], hm0356_regs.inittbl_size);
-    
     if (rc < 0)
         return rc;
     else
+    {
+        if (hm0356info->sensor_Orientation == MSM_CAMERA_SENSOR_ORIENTATION_180) 
+        {
+            //Here to setting sensor orientation for HW design.
+            //Preview and Snapshot orientation.
+            hm0356_i2c_write(hm0356_client->addr, 0x0006, 0x80, FC_BYTE_LEN);
+            printk("Finish Orientation Setting.\n");	
+        }
         printk("Finish Initial Setting for HM0356.\n");
-    
+    }
     return rc;
 }
 
@@ -391,6 +388,7 @@ static long hm0356_set_sensor_mode(int mode)
         }
             break;
 //Div2-SW6-MM-CL-mirrorFront-00+}
+
         default:
         return -EINVAL;
     }
@@ -557,7 +555,7 @@ int hm0356_power_off(void)
             return rc;
 
         /* Disable camera 1.8V power */
-        rc = fih_cam_vreg_control(hm0356info->cam_vreg_vddio_id, 1800, 0);//Div2-SW6-MM-MC-FixCurrentIssueWhenSuspend-00*
+        rc = fih_cam_vreg_control(hm0356info->cam_vreg_vddio_id, 1800, 1);
         if (rc)
             return rc;
         printk(KERN_INFO "hm0356_power_off: Disable camera power\n");
@@ -591,7 +589,6 @@ static int hm0356_sensor_init_probe(const struct msm_camera_sensor_info *data)
 {
     uint16_t model_id = 0;
     int rc = 0;
-    uint16_t retry_count=0;
 
     printk("hm0356_sensor_init_probe entry.\n");
     sensor_init_parameters(data,&hm0356_parameters);
@@ -604,22 +601,8 @@ static int hm0356_sensor_init_probe(const struct msm_camera_sensor_info *data)
     hm0356_power_on();
 
     rc = hm0356_reg_init();
-    if (rc < 0)//Div2-SW6-MM-CL-FrontCameraInitFail-00+{
-    {
-        do 
-        {
-            hm0356_power_off();
-            msleep(200);
-            hm0356_power_on();
-            rc = hm0356_reg_init();
-            retry_count++;
-            printk("hm0356_sensor_init_probe  retry_count = 0x%d\n", retry_count);
-        } 
-        while((rc < 0)&&(retry_count<3));
-
-        if(rc < 0)
-            goto init_probe_fail;
-    }//Div2-SW6-MM-CL-FrontCameraInitFail-00+}
+    if (rc < 0)
+        goto init_probe_fail;
 
     rc = hm0356_i2c_read(hm0356_client->addr,0x0001, &model_id, FC_BYTE_LEN);
     if (rc < 0 || model_id != HM0356_MODEL_ID_1)//Div2-SW6-MM-MC-ImplementCameraFTMforSF8Serials-00*
@@ -636,7 +619,6 @@ static int hm0356_sensor_init_probe(const struct msm_camera_sensor_info *data)
     return rc;
 
 init_probe_fail:
-    hm0356_power_off();//Div2-SW6-MM-CL-FrontCameraInitFail-00+
     printk("hm0356_sensor_init_probe FAIL.\n");
     return rc;
 }
@@ -668,7 +650,6 @@ init_done:
     return rc;
 
 init_fail:
-    mutex_unlock(&hm0356_mut);//Div2-SW6-MM-CL-FrontCameraInitFail-00+
     kfree(hm0356_ctrl);
     return rc;
 }

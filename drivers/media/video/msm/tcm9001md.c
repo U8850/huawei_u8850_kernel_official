@@ -284,20 +284,6 @@ static long tcm9001md_set_sensor_mode(int mode)
         }
             break;
 
-//Div2-SW6-MM-MC-mirrorFront-00+{
-        case SENSOR_MIRROR_MODE:
-        {
-            printk(KERN_ERR "tcm9001md_msg: case SENSOR_MIRROR_MODE.\n");
-            if (tcm9001mdinfo->sensor_Orientation == MSM_CAMERA_SENSOR_ORIENTATION_0) 
-            {
-                tcm9001md_i2c_write(tcm9001md_client, 0x22, 0x47);
-            }
-
-            printk("Finish Orientation Setting %d.\n",tcm9001mdinfo->sensor_Orientation);
-        }
-            break;
-//Div2-SW6-MM-MC-mirrorFront-00+}
-
         default:
         {
             printk(KERN_ERR "tcm9001md_set_sensor_mode: ERR: Invalid case !\n");
@@ -448,12 +434,6 @@ int tcm9001md_power_on(void)
 
     mdelay(2);  //t6 > 2ms
 
-//Div2-SW6-MM-MC-FrontCameraInitFail-00+{
-#ifdef CONFIG_TCM9001MD_STANDBY
-    tcm9001md_first_init = 0;
-#endif
-//Div2-SW6-MM-MC-FrontCameraInitFail-00+}
-
     return rc;
 }
 
@@ -508,15 +488,15 @@ static int tcm9001md_sensor_init_probe(const struct msm_camera_sensor_info *data
 {
     int rc = 0;
     unsigned char v = 0;
-    uint16_t retry_count = 0;//Div2-SW6-MM-MC-FrontCameraInitFail-00+
     printk("tcm9001md_sensor_init_probe: Entry.\n");
 
+    printk("tcm9001md_sensor_init_probe entry.\n");
     sensor_init_parameters(data,&tcm9001md_parameters);
 
 #ifdef CONFIG_TCM9001MD_STANDBY
     if (tcm9001md_first_init == 1)
     {
-        printk("tcm9001md_sensor_init_probe: tcm9001md_first_init = 1 ...\n");
+        tcm9001md_first_init = 0;
 
         rc = tcm9001md_power_on();
         if (rc < 0)
@@ -531,16 +511,7 @@ static int tcm9001md_sensor_init_probe(const struct msm_camera_sensor_info *data
         if (rc < 0)
         {
             printk("tcm9001md_sensor_init_probe: ERR: tcm9001md_sensor_standby(0) failed !\n");
-            //Div2-SW6-MM-MC-FrontCameraInitFail-00+{
-            tcm9001md_power_off();
-            msleep(200);
-            tcm9001md_power_on();
-            printk("tcm9001md_sensor_init_probe: Reset sensor power for re-init ~~\n");
-            //Div2-SW6-MM-MC-FrontCameraInitFail-00+}
-        }
-        else
-        {
-            printk("tcm9001md_sensor_init_probe: Exit SW standby success !\n");
+            goto init_probe_fail;
         }
     }
 #else
@@ -553,27 +524,12 @@ static int tcm9001md_sensor_init_probe(const struct msm_camera_sensor_info *data
 #endif
 
     rc = tcm9001md_reg_init();
-    if (rc < 0)//Div2-SW6-MM-MC-FrontCameraInitFail-00+{
+    if (rc < 0)
     {
-        do 
-        {
-            tcm9001md_power_off();
-            msleep(200);
-            tcm9001md_power_on();
-            rc = tcm9001md_reg_init();
-            retry_count++;
-            printk("hm0357_sensor_init_probe  retry_count = 0x%d\n", retry_count);
-        } 
-        while((rc < 0)&&(retry_count<3));
-
-        if(rc < 0)
-        {
-            rc = - EIO;
-            printk("tcm9001md_sensor_init_probe: ERR: tcm9001md_reg_init() failed, err = %d !\n", rc);
-            goto init_probe_fail;
-        }
-    }//Div2-SW6-MM-CL-FrontCameraInitFail-00+}
-    
+        rc = - EIO;
+        printk("tcm9001md_sensor_init_probe: ERR: tcm9001md_reg_init() failed, err = %d !\n", rc);
+        goto init_probe_fail;
+    }
 
     // Here to check chip version identification.
     rc = tcm9001md_i2c_read(tcm9001md_client, REG_TCM9001MD_MODEL_ID_1, &v);
@@ -749,11 +705,9 @@ static struct i2c_driver tcm9001md_i2c_driver = {
     },
 };
 
-//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00*{
 static int tcm9001md_sensor_probe(const struct msm_camera_sensor_info *info,
 				struct msm_sensor_ctrl *s)
 {
-    unsigned char v;
     int rc = i2c_add_driver(&tcm9001md_i2c_driver);
 
     printk(KERN_INFO "tcm9001md_sensor_probe: Called.....\n");
@@ -764,19 +718,6 @@ static int tcm9001md_sensor_probe(const struct msm_camera_sensor_info *info,
     }
     tcm9001mdinfo= info;
 
-    v = 0;
-    /* Init VGA pins state */
-#if 0
-    gpio_tlmm_config(GPIO_CFG(tcm9001mdinfo->vga_rst_pin, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    printk(KERN_INFO "%s: Re-set config for gpio %d .\n", __func__, tcm9001mdinfo->vga_rst_pin);
-
-    gpio_tlmm_config(GPIO_CFG(tcm9001mdinfo->vga_pwdn_pin, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    printk(KERN_INFO "%s: Re-set config for gpio %d .\n", __func__, tcm9001mdinfo->vga_pwdn_pin);
-
-    gpio_tlmm_config(GPIO_CFG(tcm9001mdinfo->vga_power_en_pin, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    printk(KERN_INFO "%s: Re-set config for gpio %d .\n", __func__, tcm9001mdinfo->vga_power_en_pin);
-#endif
-    
     rc = fih_cam_output_gpio_control(tcm9001mdinfo->vga_rst_pin, "tcm9001md", 0);
     if (rc)
         return rc;
@@ -789,77 +730,14 @@ static int tcm9001md_sensor_probe(const struct msm_camera_sensor_info *info,
     if (rc)
         return rc;
 
-    /* Here to check sensor is existence */
-    msm_camio_clk_enable(CAMIO_CAM_MCLK_CLK);
-    msleep(30);
-
-    /* Setting MCLK = 24MHz */
-    msm_camio_clk_rate_set(24000000);
-    //msm_camio_camif_pad_reg_reset();
-    printk(KERN_INFO "%s: Setting MCLK = 24MHz \n", __func__);
-
-    /* Pull hight power enable = GPIO98  */
-    rc = fih_cam_output_gpio_control(tcm9001mdinfo->vga_power_en_pin, "tcm9001md", 1);
-    if (rc)
-        return rc;
-
-    mdelay(1);  //t1+t2+t3 = 1ms
-
-    /* Pull hight PWRDWN = CAM_VGA_STANDBY  */
-    rc = fih_cam_output_gpio_control(tcm9001mdinfo->vga_pwdn_pin, "tcm9001md", 1);
-    if (rc)
-        return rc;
-
-    mdelay(2);  //t4 = 1ms
-
-    /* Enable  MCLK = 24MHz */
-    gpio_tlmm_config(GPIO_CFG(tcm9001mdinfo->MCLK_PIN, 1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);//Div2-SW6-MM-MC-Camera-ModifiedPowerSequence-01*
-    printk(KERN_INFO "%s: Output MCLK end.  \n", __func__);
-
-    mdelay(2);
-
-    /* Pull Low PWRDWN = CAM_VGA_STANDBY  */
-    rc = fih_cam_output_gpio_control(tcm9001mdinfo->vga_pwdn_pin, "tcm9001md", 0);
-    if (rc)
-        return rc;
-
-    mdelay(2);  //t5 = 2ms
-
-    /* Pull High REDET = CAM_VGA_RST_N  */
-    rc = fih_cam_output_gpio_control(tcm9001mdinfo->vga_rst_pin, "tcm9001md", 1);
-    if (rc)
-        return rc;
-
-    mdelay(2);  //t6 > 2ms
-
-    // Here to check chip version identification.
-    rc = tcm9001md_i2c_read(tcm9001md_client, REG_TCM9001MD_MODEL_ID_1, &v);
-    if (rc < 0 || v != TCM9001MD_MODEL_ID_1)
-    {
-        printk("tcm9001md_sensor_probe: ERR: Red MODEL_ID_1 = 0x%x failed !\n", v);
-        goto probe_done;
-    }
-    printk("tcm9001md_sensor_probe: MODEL_ID_1 = 0x%x .\n", v);
-
-    rc = tcm9001md_i2c_read(tcm9001md_client, REG_TCM9001MD_MODEL_ID_2, &v);
-    if (rc < 0 || v != TCM9001MD_MODEL_ID_2)
-    {
-        printk("tcm9001md_sensor_probe: ERR: Red MODEL_ID_2 = 0x%x failed !\n", v);
-        goto probe_done;
-    }
-    printk("tcm9001md_sensor_probe: MODEL_ID_2 = 0x%x .\n", v);
-
     s->s_init = tcm9001md_sensor_init;
     s->s_release = tcm9001md_sensor_release;
     s->s_config  = tcm9001md_sensor_config;
 
 probe_done:
-    tcm9001md_power_off();
-    msm_camio_clk_disable(CAMIO_CAM_MCLK_CLK);
     CDBG("%s %s:%d\n", __FILE__, __func__, __LINE__);
     return rc;
 }
-//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00*}
 
 static int __tcm9001md_probe(struct platform_device *pdev)
 {

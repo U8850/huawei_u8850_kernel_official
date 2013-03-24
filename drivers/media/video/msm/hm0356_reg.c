@@ -20,7 +20,7 @@ struct hm0356_i2c_reg_conf const fc_init_tbl[] = {
 	{ 0x0026, 0x03, FC_BYTE_LEN, 0 },
 
 //Basic
-	{ 0x0006, 0x88, FC_BYTE_LEN, 0 },
+	{ 0x0006, 0x08, FC_BYTE_LEN, 0 },
 	{ 0x0022, 0x47, FC_BYTE_LEN, 0 },
 	{ 0x0039, 0x12, FC_BYTE_LEN, 0 },
 	{ 0x005D, 0x80, FC_BYTE_LEN, 0 },

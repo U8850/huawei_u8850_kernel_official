@@ -870,7 +870,6 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
 	mutex_lock(&module_mutex);
 	/* Store the name of the last unloaded module for diagnostic purposes */
 	strlcpy(last_unloaded_module, mod->name, sizeof(last_unloaded_module));
-	ddebug_remove_module(mod->name);
 	free_module(mod);
 
  out:
@@ -1532,6 +1531,9 @@ static void free_module(struct module *mod)
 	remove_notes_attrs(mod);
 	remove_sect_attrs(mod);
 	mod_kobject_remove(mod);
+
+	/* Remove dynamic debug info */
+	ddebug_remove_module(mod->name);
 
 	/* Arch-specific cleanup. */
 	module_arch_cleanup(mod);
@@ -2202,8 +2204,14 @@ static noinline struct module *load_module(void __user *umod,
 	} else if (!same_magic(modmagic, vermagic, versindex)) {
 		printk(KERN_ERR "%s: version magic '%s' should be '%s'\n",
 		       mod->name, modmagic, vermagic);
+#ifdef CONFIG_MODULE_FORCE_VERMAGIC
+		err = try_to_force_load(mod, "magic");
+		if (err)
+			goto free_hdr;
+#else
 		err = -ENOEXEC;
 		goto free_hdr;
+#endif
 	}
 
 	staging = get_modinfo(sechdrs, infoindex, "staging");

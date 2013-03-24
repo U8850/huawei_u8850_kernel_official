@@ -19,6 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
+#include <linux/gpio_event.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/bootmem.h>
@@ -160,17 +161,9 @@
 /* FIHTDC, Div2-SW2-BSP SungSCLee, HDMI { */
 #define MSM_FB_SIZE		0xA00000       ///0x500000
 /* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */
-#define MSM_GPU_PHYS_SIZE       SZ_2M
-///#define MSM_PMEM_ADSP_SIZE      0x2000000  //SW2-5-CL-Camera-720P-00*
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-//#define MSM_PMEM_ADSP_SIZE       0x1800000 //for Adobe flash certification  
-#define MSM_PMEM_ADSP_SIZE         0x1c80000 //0x1800000 setting fail camera CTS some time . change size 0x1c80000 to PASS Adobe flash certification and CTS android.hardware.cts.CameraTest#testPreviewPictureSizesCombination 
-
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
-
+#define MSM_PMEM_ADSP_SIZE      0x2000000  //SW2-5-CL-Camera-720P-00*
 #define MSM_FLUID_PMEM_ADSP_SIZE	0x2800000
 #define PMEM_KERNEL_EBI1_SIZE   0x600000
-#define MSM_PMEM_AUDIO_SIZE     0x200000
 
 #define PMIC_GPIO_INT		27
 #define PMIC_VREG_WLAN_LEVEL	2900
@@ -777,7 +770,7 @@ static const unsigned int surf_keymap[] = {
 	KEY(0, 0, KEY_VOLUMEUP),
 	KEY(0, 1, KEY_VOLUMEDOWN),
 	KEY(0, 2, KEY_SILENT),
-	KEY(0, 3, KEY_SILENTOFF),
+	KEY(0, 3, KEY_RIGHT),
 	KEY(0, 4, KEY_ENTER),
 	
 	KEY(1, 0, KEY_LEFT),
@@ -1470,8 +1463,6 @@ static struct msm_camera_sensor_info msm_camera_sensor_mt9p111_data = {
     .flash_main_waittime = 0,
     .flash_main_starttime = 0,
     .flash_second_waittime = 0,
-    .preflash_light = 0x31,//Div2-SW6-MM-CL-FB3LED-00+
-    .torch_light = 0x34,//Div2-SW6-MM-CL-FB3LED-00+
     //SW5-Multimedia-TH-FlashModeSetting-01+}
 
     //SW5-Multimedia-TH-MT9P111ReAFTest-00+{
@@ -1597,7 +1588,6 @@ static struct msm_camera_sensor_info msm_camera_sensor_tcm9001md_data = {
 	.sensor_name    = "tcm9001md",
 	.sensor_reset   = 19,
 	.sensor_pwd     = 0,
-	.sensor_Orientation = MSM_CAMERA_SENSOR_ORIENTATION_0,
 	.pdata          = &msm_camera_device_data,
 	.resource       = msm_camera_resources,
 	.num_resources  = ARRAY_SIZE(msm_camera_resources),
@@ -1869,7 +1859,7 @@ void camera_sensor_hwpin_init(void)
         msm_camera_sensor_mt9p111_data.flash_target_addr = 0xB80C;
         msm_camera_sensor_mt9p111_data.flash_target = 0x07BE;
         msm_camera_sensor_mt9p111_data.flash_bright = 0x20;
-        msm_camera_sensor_mt9p111_data.flash_main_waittime = 300;	//150	//SW4-L1-HL-Camera-AddMainFlashLastTime_SFXG.B-1716-00*
+        msm_camera_sensor_mt9p111_data.flash_main_waittime = 150;
         msm_camera_sensor_mt9p111_data.flash_main_starttime = 150;
         msm_camera_sensor_mt9p111_data.flash_second_waittime = 200;
         /*Fast AF*/
@@ -1963,11 +1953,6 @@ void camera_sensor_hwpin_init(void)
             msm_camera_sensor_mt9p111_data.flash_main_starttime = 90;
             msm_camera_sensor_mt9p111_data.flash_main_waittime = 700;
         }
-        if(pid ==Product_FB3 )//Div2-SW6-MM-CL-FB3LED-00+
-        {
-            msm_camera_sensor_mt9p111_data.torch_light = 0x3E;//Div2-SW6-MM-CL-FB3LED-01*
-            msm_camera_sensor_mt9p111_data.preflash_light=0x3E;
-        }
     }
 
 #endif
@@ -2029,7 +2014,6 @@ void camera_sensor_hwpin_init(void)
             msm_camera_sensor_hm0357_data.vga_pwdn_pin = 174;
         }
         
-        msm_camera_sensor_hm0357_data.sensor_Orientation = MSM_CAMERA_SENSOR_ORIENTATION_270,//Div2-SW6-MM-MC-Hm0357Orientation-00+
         msm_camera_sensor_hm0357_data.pwdn_pin = 2;
         msm_camera_sensor_hm0357_data.mclk_sw_pin = 0xffff;
 
@@ -2047,13 +2031,6 @@ void camera_sensor_hwpin_init(void)
         msm_camera_sensor_hm0357_data.cam_vreg_vddio_id = "gp7";
         msm_camera_sensor_hm0357_data.cam_vreg_acore_id = "gp10";
     }
-    else if (pid == Product_SF5)//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00+{
-    {
-        msm_camera_sensor_hm0357_data.rst_pin = 120;
-        msm_camera_sensor_hm0357_data.pwdn_pin = 2;
-        msm_camera_sensor_hm0357_data.vga_pwdn_pin = 0;
-        msm_camera_sensor_hm0357_data.vga_power_en_pin = 98;
-    }//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00+}
     else// For FBx and FDx series project
     {
         msm_camera_sensor_hm0357_data.rst_pin = 1;
@@ -2131,12 +2108,12 @@ static int __init snddev_poweramp_gpio_init(void)
     //MM-RC-ChangeCodingStyle-00+{
     int pid =0;
     pid = fih_get_product_id();
-    //MM-RC-ChangeCodingStyle-01*{
-    if((pid==Product_SF5)||IS_SF8_SERIES_PRJ())//MM-RC-ChangeSH8_SPKAMP-00*
+	//MM-RC-ChangeCodingStyle-01*{
+    if((pid==Product_SF5)||(pid==Product_SF8)||(pid==Product_SFH))
     {
     	SPK1_AMP = 36;
     }
-    else if(pid==Product_SF6)//MM-RC-ChangeSH8_SPKAMP-00*
+	else if((pid==Product_SF6)||(pid==Product_SH8))
     {
     	SPK1_AMP = 37;
     }
@@ -2145,7 +2122,7 @@ static int __init snddev_poweramp_gpio_init(void)
     	SPK1_AMP = 36;
 	SPK2_AMP = 37;
     }
-    //MM-RC-ChangeCodingStyle-01*}
+	//MM-RC-ChangeCodingStyle-01*}
 audio_pamp_spk1_amp_gpio_config =
     GPIO_CFG(SPK1_AMP, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA);
 #ifdef CONFIG_FIH_FBX_AUDIO
@@ -2346,14 +2323,9 @@ static struct msm_gpio mi2s_clk_gpios[] = {
 	    "MI2S_SCLK"},
 	{ GPIO_CFG(144, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 	    "MI2S_WS"},
-};
-
-//SW4-L1-HL-Camera-FixCameraCrashAfterOpenFM-00+{
-static struct msm_gpio mi2s_mclk_gpios[] = {
 	{ GPIO_CFG(120, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-		"MI2S_MCLK_A"},
+	    "MI2S_MCLK_A"},
 };
-//SW4-L1-HL-Camera-FixCameraCrashAfterOpenFM-00+}
 
 static struct msm_gpio mi2s_rx_data_lines_gpios[] = {
 	{ GPIO_CFG(121, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
@@ -2372,7 +2344,7 @@ static struct msm_gpio mi2s_tx_data_lines_gpios[] = {
 };
 
 int mi2s_config_clk_gpio(void)
-{	
+{
  //MM-RC-ChangeFMPath-00*{
  if(!IS_SF8_SERIES_PRJ()){
 	int rc = 0;
@@ -2384,19 +2356,6 @@ int mi2s_config_clk_gpio(void)
 					__func__);
 		return rc;
 	}
-
-	//SW4-L1-HL-Camera-FixCameraCrashAfterOpenFM-00+{
-	if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-	{
-		rc = msm_gpios_request_enable(mi2s_mclk_gpios,
-				ARRAY_SIZE(mi2s_mclk_gpios));
-		if (rc) {
-			pr_err("%s: enable mi2s clk gpios  failed\n",
-						__func__);
-			return rc;
-		}
-	}	
-	//SW4-L1-HL-Camera-FixCameraCrashAfterOpenFM-00+}	
 }
 //MM-RC-ChangeFMPath-00*}
 	return 0;
@@ -2405,10 +2364,6 @@ int mi2s_config_clk_gpio(void)
 int  mi2s_unconfig_data_gpio(u32 direction, u8 sd_line_mask)
 {
 	int i, rc = 0;
-	 //MM-RC-ChangeFMPath-01*{
-	 if(IS_SF8_SERIES_PRJ())
-	 	return rc;
-	 //MM-RC-ChangeFMPath-01*}
 	sd_line_mask &= MI2S_SD_LINE_MASK;
 
 	switch (direction) {
@@ -2438,10 +2393,6 @@ int mi2s_config_data_gpio(u32 direction, u8 sd_line_mask)
 {
 	int i , rc = 0;
 	u8 sd_config_done_mask = 0;
-	 //MM-RC-ChangeFMPath-01*{
-	 if(IS_SF8_SERIES_PRJ())
-	 	return rc;
-	 //MM-RC-ChangeFMPath-01*}
 
 	sd_line_mask &= MI2S_SD_LINE_MASK;
 
@@ -2464,9 +2415,7 @@ int mi2s_config_data_gpio(u32 direction, u8 sd_line_mask)
 	case DIR_RX:
 		i = 0;
 		while (sd_line_mask && (rc == 0)) {
-			
 			if (sd_line_mask & 0x1) {
-				
 				rc = msm_gpios_request_enable(
 					mi2s_rx_data_lines_gpios + i , 1);
 				if (rc) {
@@ -2479,7 +2428,6 @@ int mi2s_config_data_gpio(u32 direction, u8 sd_line_mask)
 				} else
 					sd_config_done_mask |= (1 << i);
 			}
-			
 			sd_line_mask = sd_line_mask >> 1;
 			i++;
 		}
@@ -2498,14 +2446,7 @@ int mi2s_unconfig_clk_gpio(void)
  //MM-RC-ChangeFMPath-00*{
  if(!IS_SF8_SERIES_PRJ()){
 	msm_gpios_disable_free(mi2s_clk_gpios, ARRAY_SIZE(mi2s_clk_gpios));
-
-	 //SW4-L1-HL-Camera-FixCameraCrashAfterOpenFM-00+{
-	 if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-	 {
-		msm_gpios_disable_free(mi2s_mclk_gpios, ARRAY_SIZE(mi2s_mclk_gpios));		
-	 }
-	 //SW4-L1-HL-Camera-FixCameraCrashAfterOpenFM-00+} 
- } 	
+ }
   //MM-RC-ChangeFMPath-00*}
 	return 0;
 }
@@ -3523,12 +3464,15 @@ static char *usb_functions_c000[] = {
     "usb_mass_storage",
 };
 
+//BEGIN FXPCAYM-206: Motorola-VMU WX435-Caymus #26408:
+// Removed modem composition as c001 is used for UMS/ADB
 //C001
 static char *usb_functions_c001[] = {
-    "modem",
     "adb",
     "usb_mass_storage",
 };
+
+//END FXPCAYM-206: Motorola-VMU WX435-Caymus #26408
 
 //C002
 static char *usb_functions_c002[] = {
@@ -3584,9 +3528,6 @@ static char *usb_functions_all[] = {
 #else
 
 static char *usb_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-#endif
 #ifdef CONFIG_USB_ANDROID_RNDIS
         "rndis",
 #endif
@@ -3601,6 +3542,9 @@ static char *usb_functions_all[] = {
 #endif
 #ifdef CONFIG_USB_ANDROID_RMNET
 	"rmnet",
+#endif
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
 #endif
 };
 
@@ -3742,9 +3686,14 @@ static struct android_usb_product usb_products[] = {
 #endif
 //Div6-D1-JL-UsbPidVid-02+}
 
-
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-	.nluns		= 2,    //Div6-D1-JL-UsbPorting-00+ PCtool  //SW252-rexer-dual_SD-00
+//Div2D5-LC-BSP-Implement_Dual_SD_Card-00 *[
+#ifdef CONFIG_FIH_SF5_DUAL_SD_CARD
+	.nluns		= 3,
+#else
+	.nluns		= 2,    //Div6-D1-JL-UsbPorting-00+ PCtool
+#endif
+//Div2D5-LC-BSP-Implement_Dual_SD_Card-00 *]
 	.vendor		= "Qualcomm Incorporated",
 	.product        = "Mass Storage",
 	.release	= 0x0100,
@@ -3774,7 +3723,9 @@ static struct platform_device rndis_device = {
 
 static struct android_usb_platform_data android_usb_pdata = {
 	.vendor_id	= 0x0489,   //Div6-D1-JL-UsbPidVid-00+
-	.product_id	= 0xC001,   //Div2-5-3-Peripheral-LL-UsbCustomized-01*
+//BEGIN FXPCAYM-206: Motorola-VMU WX435-Caymus #26408:
+	.product_id	= 0xC001,   //Div6-D1-JL-UsbPidVid-03+
+//END FXPCAYM-206: Motorola-VMU WX435-Caymus #26408:
 	.version	= 0x0100,
 	.product_name		= "Android HSUSB Device",
 	.manufacturer_name	= "FIH",
@@ -4130,11 +4081,6 @@ static struct i2c_board_info msm_i2c_board_info[] = {
 //Div2D5-OwenHuang-SF8_Sensor_Porting-00+}
 
 //Div2-SW2-BSP-Touch, Vincent +
-#ifdef CONFIG_FIH_TOUCHSCREEN_INNOLUX
-    {
-        I2C_BOARD_INFO("innolux_ts", 0x00),
-    },
-#endif
 #ifdef CONFIG_FIH_TOUCHSCREEN_BU21018MWV
     {
         I2C_BOARD_INFO("bu21018mwv", 0x5C),
@@ -4707,6 +4653,7 @@ static struct msm_gpio dtv_panel_gpios[] = {
 #ifdef CONFIG_FB_MSM_HDMI_ADV7520_PANEL
 	{ GPIO_CFG(18, 0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "hdmi_int" },
 #endif
+	{ GPIO_CFG(120, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "wca_mclk" },
 	{ GPIO_CFG(121, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "wca_sd0" },
 	{ GPIO_CFG(122, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "wca_sd1" },
 	{ GPIO_CFG(123, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "wca_sd2" },
@@ -4739,12 +4686,6 @@ static struct msm_gpio dtv_panel_gpios[] = {
 	{ GPIO_CFG(177, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "dtv_dat22" },
 	{ GPIO_CFG(178, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "dtv_dat23" },
 };
-
-//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-static struct msm_gpio dtv_panel_mclk_gpios[] = {
-	{ GPIO_CFG(120, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "wca_mclk" },
-};
-//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}
 #endif
 
 #ifdef HDMI_RESET
@@ -4826,18 +4767,6 @@ static int dtv_panel_power(int on)
 				__func__, rc);
 			return rc;
 		}
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-		if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-		{
-			rc = msm_gpios_enable(dtv_panel_mclk_gpios,
-					ARRAY_SIZE(dtv_panel_mclk_gpios));		
-			if (rc < 0) {
-				printk(KERN_ERR "%s: gpio enable failed: %d\n",
-					__func__, rc);
-				return rc;
-			}
-		}		
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}
 	} else {
 		rc = msm_gpios_disable(dtv_panel_gpios,
 				ARRAY_SIZE(dtv_panel_gpios));
@@ -4845,19 +4774,7 @@ static int dtv_panel_power(int on)
 			printk(KERN_ERR "%s: gpio disable failed: %d\n",
 				__func__, rc);
 			return rc;
-		}		
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-		if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-		{
-			rc = msm_gpios_disable(dtv_panel_mclk_gpios,
-					ARRAY_SIZE(dtv_panel_mclk_gpios));		
-			if (rc < 0) {
-				printk(KERN_ERR "%s: gpio enable failed: %d\n",
-					__func__, rc);
-				return rc;
-			}
-		}		
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}
+		}
 	}
 
 	rc = i2c_gpio_power(on);
@@ -4906,19 +4823,7 @@ static int dtv_panel_power(int on)
 			printk(KERN_ERR "%s: gpio disable failed: %d\n",
 				__func__, rc);
 			return rc;
-		}       
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-		if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-		{
-			rc = msm_gpios_disable(dtv_panel_mclk_gpios,
-					ARRAY_SIZE(dtv_panel_mclk_gpios));		
-			if (rc < 0) {
-				printk(KERN_ERR "%s: gpio enable failed: %d\n",
-					__func__, rc);
-				return rc;
-			}
-		}	
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}		
+		}            
         printk("dtv_panel_power always turn on\n");
         return 0;
     }else if(hdmi_init_done){				
@@ -4929,18 +4834,6 @@ static int dtv_panel_power(int on)
 				__func__, rc);
 			return rc;
 		}
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-		if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-		{
-			rc = msm_gpios_enable(dtv_panel_mclk_gpios,
-					ARRAY_SIZE(dtv_panel_mclk_gpios));		
-			if (rc < 0) {
-				printk(KERN_ERR "%s: gpio enable failed: %d\n",
-					__func__, rc);
-				return rc;
-			}
-		}			
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}		
         return 0;		        
     }
     
@@ -4952,18 +4845,6 @@ static int dtv_panel_power(int on)
 				__func__, rc);
 			return rc;
 		}
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-		if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-		{
-			rc = msm_gpios_enable(dtv_panel_mclk_gpios,
-					ARRAY_SIZE(dtv_panel_mclk_gpios));		
-			if (rc < 0) {
-				printk(KERN_ERR "%s: gpio enable failed: %d\n",
-					__func__, rc);
-				return rc;
-			}
-		}		
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}		
 		rc = msm_gpios_enable(hdmi_panel_gpios,
 				ARRAY_SIZE(hdmi_panel_gpios));
 		if (rc < 0) {
@@ -4979,18 +4860,6 @@ static int dtv_panel_power(int on)
 				__func__, rc);
 			return rc;
 		}
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+{
-		if ((fih_get_product_id() != Product_SF5) || (fih_get_product_phase() != Product_PCR))
-		{
-			rc = msm_gpios_disable(dtv_panel_mclk_gpios,
-					ARRAY_SIZE(dtv_panel_mclk_gpios));		
-			if (rc < 0) {
-				printk(KERN_ERR "%s: gpio enable failed: %d\n",
-					__func__, rc);
-				return rc;
-			}
-		}		
-		//SW4-L1-HL-Camera-FixGPIO120IsCameraRstPinInPCR-00+}		
 	}
     /* VDDIO 1.8V -- LDO11*/
     vreg_ldo11 = vreg_get(NULL, "gp2");
@@ -5135,12 +5004,6 @@ static struct android_pmem_platform_data android_pmem_adsp_pdata = {
        .cached = 0,
 };
 
-static struct android_pmem_platform_data android_pmem_audio_pdata = {
-       .name = "pmem_audio",
-       .allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-       .cached = 0,
-};
-
 static struct platform_device android_pmem_kernel_ebi1_device = {
        .name = "android_pmem",
        .id = 1,
@@ -5153,73 +5016,110 @@ static struct platform_device android_pmem_adsp_device = {
        .dev = { .platform_data = &android_pmem_adsp_pdata },
 };
 
-static struct platform_device android_pmem_audio_device = {
-       .name = "android_pmem",
-       .id = 4,
-       .dev = { .platform_data = &android_pmem_audio_pdata },
-};
-
-static struct kgsl_platform_data kgsl_pdata = {
-#ifdef CONFIG_MSM_NPA_SYSTEM_BUS
-	/* NPA Flow IDs */
-	.high_axi_3d = MSM_AXI_FLOW_3D_GPU_HIGH,
-	.high_axi_2d = MSM_AXI_FLOW_2D_GPU_HIGH,
-#else
-	/* AXI rates in KHz */
-	.high_axi_3d = 192000,
-	.high_axi_2d = 192000,
-#endif
-	.max_grp2d_freq = 0,
-	.min_grp2d_freq = 0,
-	.set_grp2d_async = NULL, /* HW workaround, run Z180 SYNC @ 192 MHZ */
-	.max_grp3d_freq = 245760000,
-	.min_grp3d_freq = 192 * 1000*1000,
-	.set_grp3d_async = set_grp3d_async,
-	.imem_clk_name = "imem_clk",
-	.grp3d_clk_name = "grp_clk",
-	.grp2d0_clk_name = "grp_2d_clk",
-};
-
-static struct resource kgsl_resources[] = {
+struct resource kgsl_3d0_resources[] = {
 	{
-		.name = "kgsl_reg_memory",
+		.name  = KGSL_3D0_REG_MEMORY,
 		.start = 0xA3500000, /* 3D GRP address */
 		.end = 0xA351ffff,
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.name   = "kgsl_phys_memory",
-		.start = 0,
-		.end = 0,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.name = "kgsl_yamato_irq",
+		.name = KGSL_3D0_IRQ,
 		.start = INT_GRP_3D,
 		.end = INT_GRP_3D,
 		.flags = IORESOURCE_IRQ,
 	},
+};
+
+static struct kgsl_device_platform_data kgsl_3d0_pdata = {
+	.pwr_data = {
+		.pwrlevel = {
+			{
+				.gpu_freq = 245760000,
+				.bus_freq = 192000000,
+			},
+			{
+				.gpu_freq = 192000000,
+				.bus_freq = 152000000,
+			},
+			{
+				.gpu_freq = 192000000,
+				.bus_freq = 0,
+			},
+		},
+		.init_level = 0,
+		.num_levels = 3,
+		.set_grp_async = set_grp3d_async,
+		.idle_timeout = HZ/20,
+		.nap_allowed = true,
+	},
+	.clk = {
+		.name = {
+			.clk = "grp_clk",
+			.pclk = "grp_pclk",
+		},
+	},
+	.imem_clk_name = {
+		.clk = "imem_clk",
+		.pclk = NULL,
+	},
+};
+
+struct platform_device msm_kgsl_3d0 = {
+	.name = "kgsl-3d0",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(kgsl_3d0_resources),
+	.resource = kgsl_3d0_resources,
+	.dev = {
+		.platform_data = &kgsl_3d0_pdata,
+	},
+};
+
+static struct resource kgsl_2d0_resources[] = {
 	{
-		.name = "kgsl_2d0_reg_memory",
+		.name = KGSL_2D0_REG_MEMORY,
 		.start = 0xA3900000, /* Z180 base address */
 		.end = 0xA3900FFF,
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.name  = "kgsl_2d0_irq",
+		.name = KGSL_2D0_IRQ,
 		.start = INT_GRP_2D,
 		.end = INT_GRP_2D,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-static struct platform_device msm_device_kgsl = {
-	.name = "kgsl",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(kgsl_resources),
-	.resource = kgsl_resources,
+static struct kgsl_device_platform_data kgsl_2d0_pdata = {
+	.pwr_data = {
+		.pwrlevel = {
+			{
+				.gpu_freq = 0,
+				.bus_freq = 192000000,
+			},
+		},
+		.init_level = 0,
+		.num_levels = 1,
+		/* HW workaround, run Z180 SYNC @ 192 MHZ */
+		.set_grp_async = NULL,
+		.idle_timeout = HZ/10,
+		.nap_allowed = true,
+	},
+	.clk = {
+		.name = {
+			.clk = "grp_2d_clk",
+			.pclk = "grp_2d_pclk",
+		},
+	},
+};
+
+struct platform_device msm_kgsl_2d0 = {
+	.name = "kgsl-2d0",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(kgsl_2d0_resources),
+	.resource = kgsl_2d0_resources,
 	.dev = {
-		.platform_data = &kgsl_pdata,
+		.platform_data = &kgsl_2d0_pdata,
 	},
 };
 
@@ -5412,13 +5312,7 @@ static int display_common_power(int on)
             //pr_err("%s: SF6 wait 1 ms before reset pull high",  __func__);
         }
 /* } FIHTDC-SW5-MULTIMEDIA, Chance */ 
-        /* Div2-SW2-BSP,JOE HSU,Add LCM reset line hi -> lo -> hi */
         gpio_set_value(35, 1);  /* bring reset line high */
-        mdelay(5);
-        gpio_set_value(35, 0); 
-        mdelay(5);
-        gpio_set_value(35, 1); 
-        mdelay(5);
         ///mdelay(5);      /* 10 msec before IO can be accessed */ /* FIHTDC-Div2-SW2-BSP, Ming */
 /* FIHTDC-SW5-MULTIMEDIA, Chance { */
         if(product_id == Product_SF6)
@@ -6160,9 +6054,7 @@ static struct msm_gpio bt_config_power_on[] = {
     { GPIO_CFG(GPIO_BTUART_RFR, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "UART1DM_RFR" },
     { GPIO_CFG(GPIO_BTUART_CTS, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "UART1DM_CTS" },
     { GPIO_CFG(GPIO_BTUART_RX,  1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "UART1DM_RX" },
-    { GPIO_CFG(GPIO_BTUART_TX,  1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "UART1DM_TX" },
-    { GPIO_CFG(GPIO_BT_IRQ,     0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "BT_HOST_WAKE" },
-    { GPIO_CFG(GPIO_BT_WAKEUP,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "BT_WAKE" }
+    { GPIO_CFG(GPIO_BTUART_TX,  1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,  GPIO_CFG_2MA), "UART1DM_TX" }
 };
 
 static struct msm_gpio bt_config_power_off[] = {
@@ -6170,9 +6062,7 @@ static struct msm_gpio bt_config_power_off[] = {
     { GPIO_CFG(GPIO_BTUART_RFR, 0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "UART1DM_RFR" },
     { GPIO_CFG(GPIO_BTUART_CTS, 0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "UART1DM_CTS" },
     { GPIO_CFG(GPIO_BTUART_RX,  0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "UART1DM_RX" },
-    { GPIO_CFG(GPIO_BTUART_TX,  0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "UART1DM_TX" },
-    { GPIO_CFG(GPIO_BT_IRQ,     0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "BT_HOST_WAKE" },
-    { GPIO_CFG(GPIO_BT_WAKEUP,  0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "BT_WAKE" }
+    { GPIO_CFG(GPIO_BTUART_TX,  0, GPIO_CFG_INPUT,  GPIO_CFG_PULL_DOWN,  GPIO_CFG_2MA), "UART1DM_TX" }
 };
 
 static int bluetooth_fm_power(int on)
@@ -6350,35 +6240,6 @@ static void __init bcm4329_fm_power_init(void)
     bcm4329_fm_power_device.dev.platform_data = &fm_power;
 }
 #endif
-#if defined(CONFIG_BROADCOM_BCM4329)
-static struct resource bluesleep_resources[] = {
-    {
-        .name = "gpio_host_wake",
-        .start = GPIO_BT_IRQ,
-        .end = GPIO_BT_IRQ,
-        .flags = IORESOURCE_IO,
-    },
-    {
-        .name = "gpio_ext_wake",
-        .start = GPIO_BT_WAKEUP,
-        .end = GPIO_BT_WAKEUP,
-        .flags = IORESOURCE_IO,
-    },
-    {
-        .name = "host_wake",
-        .start = MSM_GPIO_TO_INT(GPIO_BT_IRQ),
-        .end = MSM_GPIO_TO_INT(GPIO_BT_IRQ),
-        .flags = IORESOURCE_IO,
-    },
-};
-
-static struct platform_device msm_bluesleep_device = {
-    .name = "bluesleep",
-    .id = -1,
-    .num_resources = ARRAY_SIZE(bluesleep_resources),
-    .resource = bluesleep_resources,
-};
-#endif
 
 // FIHTDC-SW2-Div6-CW-Project BCM4329 WLAN driver For SF8 +[
 #ifdef CONFIG_BROADCOM_BCM4329_WLAN_POWER
@@ -6404,8 +6265,9 @@ int wifi_power(int on)  //SW5-PT1-Connectivity_FredYu_FixPowerSequence
             mdelay(20);
         }
 
-        gpio_set_value(GPIO_WLAN_RST_N, 1);
+        gpio_set_value(GPIO_WLAN_RST_N, 0);
         mdelay(20);
+        gpio_set_value(GPIO_WLAN_RST_N, 1);
         bcm4329_power_status |= WLAN_MASK;
 
         printk(KERN_DEBUG "%s: GPIO_WLAN_RST (%s)\r\n", __FUNCTION__, gpio_get_value(GPIO_WLAN_RST_N)?"HIGH":"LOW");
@@ -6432,17 +6294,11 @@ EXPORT_SYMBOL(wifi_power);  //SW5-PT1-Connectivity_FredYu_FixPowerSequence
 
 int bcm4329_wifi_resume(void)
 {
-    printk(KERN_DEBUG "%s: START bcm4329_power_status=0x%x\r\n", __func__, bcm4329_power_status);
+    printk(KERN_DEBUG "%s: START\r\n", __FUNCTION__);
 
-    if (bcm4329_power_status == 0) {
-        printk(KERN_DEBUG "%s: PULL UP GPIO_WLAN_BT_REG_ON\r\n", __func__);
-	gpio_set_value(GPIO_WLAN_BT_REG_ON, 1);
-        mdelay(45);
-    }
-
+    gpio_set_value(GPIO_WLAN_RST_N, 0);
+    mdelay(300);
     gpio_set_value(GPIO_WLAN_RST_N, 1);
-    mdelay(20);
-    bcm4329_power_status |= WLAN_MASK;
 
     return 0;
 }
@@ -6450,16 +6306,10 @@ EXPORT_SYMBOL(bcm4329_wifi_resume);
 
 int bcm4329_wifi_suspend(void)
 {
-    printk(KERN_DEBUG "%s: START bcm4329_power_status=0x%x\r\n", __func__, bcm4329_power_status);
+    printk(KERN_DEBUG "%s: START\r\n", __FUNCTION__);
 
-    bcm4329_power_status &= ~WLAN_MASK;
-    gpio_set_value(GPIO_WLAN_RST_N, 0);	
-	
-    if (bcm4329_power_status == 0) {
-        printk(KERN_DEBUG "%s: PULL DOWN GPIO_WLAN_BT_REG_ON\r\n", __func__);
-        gpio_set_value(GPIO_WLAN_BT_REG_ON, 0);
-    }
-    
+    gpio_set_value(GPIO_WLAN_RST_N, 0);
+
     return 0;
 }
 EXPORT_SYMBOL(bcm4329_wifi_suspend);
@@ -6669,6 +6519,8 @@ static int bluetooth_power_regulators(int on)
 	return 0;
 }
 
+int fih_bluetooth_status;
+
 static int bluetooth_power(int on)
 {
 	int rc;
@@ -6784,6 +6636,9 @@ static int bluetooth_power(int on)
 				__func__, rc);
 		}
 	}
+
+	// Update the bluetooth status which is used in the detect charger function.
+	fih_bluetooth_status = on; 
 
 out:
 	printk(KERN_DEBUG "Bluetooth power switch: %d\n", on);
@@ -7213,7 +7068,6 @@ static struct platform_device *devices[] __initdata = {
 /* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */  
 	&android_pmem_kernel_ebi1_device,
 	&android_pmem_adsp_device,
-	&android_pmem_audio_device,
 	&msm_device_i2c,
 	&msm_device_i2c_2,
 	&msm_device_uart_dm1,
@@ -7246,7 +7100,8 @@ static struct platform_device *devices[] __initdata = {
 	&bcm4329_fm_power_device,
 #endif
 // FIHTDC-SW2-Div6-CW-Project BCM4329 BLUETOOTH driver For SF8 +]
-	&msm_device_kgsl,
+	&msm_kgsl_3d0,
+	&msm_kgsl_2d0,
 //Div2-SW6-MM-HL-Camera-BringUp-00+{
 #ifdef CONFIG_FIH_MT9P111
         &msm_camera_sensor_mt9p111,
@@ -7348,9 +7203,6 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_FIH_LAST_ALOG
 	&alog_ram_console_device,
 #endif
-#if defined(CONFIG_BROADCOM_BCM4329)
-	&msm_bluesleep_device,
-#endif
 //SW2-5-1-MP-DbgCftTool-00+]
 };
 
@@ -7365,12 +7217,12 @@ static struct msm_gpio msm_i2c_gpios_io[] = {
 };
 
 static struct msm_gpio qup_i2c_gpios_io[] = {
-	{ GPIO_CFG(16, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "qup_scl" },//Div2-SW6-MM-CL-I2Cstrength-00*
-	{ GPIO_CFG(17, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "qup_sda" },//Div2-SW6-MM-CL-I2Cstrength-00*
+	{ GPIO_CFG(16, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "qup_scl" },
+	{ GPIO_CFG(17, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "qup_sda" },
 };
 static struct msm_gpio qup_i2c_gpios_hw[] = {
-	{ GPIO_CFG(16, 2, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "qup_scl" },//Div2-SW6-MM-CL-I2Cstrength-00*
-	{ GPIO_CFG(17, 2, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "qup_sda" },//Div2-SW6-MM-CL-I2Cstrength-00*
+	{ GPIO_CFG(16, 2, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "qup_scl" },
+	{ GPIO_CFG(17, 2, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "qup_sda" },
 };
 
 static void
@@ -7671,12 +7523,12 @@ static struct msm_gpio sdc1_cfg_data[] = {
 //Div5-Kernel-JC-GPIOUPDATE+[
 #ifdef CONFIG_FIH_PROJECT_SF4Y6
 static struct msm_gpio sdc1_sleep_cfg_data[] = {
-	{GPIO_CFG(38, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_clk"},
-	{GPIO_CFG(39, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_cmd"},
-	{GPIO_CFG(40, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_3"},
-	{GPIO_CFG(41, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_2"},
-	{GPIO_CFG(42, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_1"},
-	{GPIO_CFG(43, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_0"},
+	{GPIO_CFG(38, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_clk"},
+	{GPIO_CFG(39, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_cmd"},
+	{GPIO_CFG(40, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_3"},
+	{GPIO_CFG(41, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_2"},
+	{GPIO_CFG(42, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_1"},
+	{GPIO_CFG(43, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "sdc1_dat_0"},
 };
 #endif
 //Div5-Kernel-JC-GPIOUPDATE+]
@@ -8716,7 +8568,7 @@ static void __init msm7x30_init_mmc(void)
 		break;
 		case Product_SF6:
 		{
-			if(fih_get_product_phase() ==Product_PR3 || fih_get_product_phase() == Product_PCR)
+			if(fih_get_product_phase() ==Product_PR3)
 				sd_detect_pin = 143;
 			else
 				sd_detect_pin = 142;
@@ -9439,20 +9291,6 @@ out:
 #endif
 //DIV5-PHONE-JH-WiMAX_GPIO-01+]
 
-//SW252-rexer-dual_SD-00+[
-int dual_sd=0;
-static int __init dual_sdcard_setup(char *str)
-{
-  if(!strcmp(str,"true"))
-  {
-    mass_storage_pdata.nluns+=1;
-    dual_sd=1;
-  }
-  return 1;
-}
-__setup("androidboot.dual_sdcard=", dual_sdcard_setup);
-//SW252-rexer-dual_SD-00+]
-
 static void __init msm7x30_init(void)
 {
 	int rc;
@@ -9708,13 +9546,6 @@ static void __init fb_size_setup(char **p)
 }
 __early_param("fb_size=", fb_size_setup);
 
-static unsigned gpu_phys_size = MSM_GPU_PHYS_SIZE;
-static void __init gpu_phys_size_setup(char **p)
-{
-	gpu_phys_size = memparse(*p, p);
-}
-__early_param("gpu_phys_size=", gpu_phys_size_setup);
-
 static unsigned pmem_adsp_size = MSM_PMEM_ADSP_SIZE;
 static void __init pmem_adsp_size_setup(char **p)
 {
@@ -9728,13 +9559,6 @@ static void __init fluid_pmem_adsp_size_setup(char **p)
 	fluid_pmem_adsp_size = memparse(*p, p);
 }
 __early_param("fluid_pmem_adsp_size=", fluid_pmem_adsp_size_setup);
-
-static unsigned pmem_audio_size = MSM_PMEM_AUDIO_SIZE;
-static void __init pmem_audio_size_setup(char **p)
-{
-	pmem_audio_size = memparse(*p, p);
-}
-__early_param("pmem_audio_size=", pmem_audio_size_setup);
 
 static unsigned pmem_kernel_ebi1_size = PMEM_KERNEL_EBI1_SIZE;
 static void __init pmem_kernel_ebi1_size_setup(char **p)
@@ -9766,25 +9590,7 @@ static void __init msm7x30_allocate_memory_regions(void)
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
-
-	size = pmem_audio_size;
-	if (size) {
-		addr = alloc_bootmem(size);
-		android_pmem_audio_pdata.start = __pa(addr);
-		android_pmem_audio_pdata.size = size;
-		pr_info("allocating %lu bytes at %p (%lx physical) for audio "
-			"pmem arena\n", size, addr, __pa(addr));
-	}
-
-	size = gpu_phys_size;
-	if (size) {
-		addr = alloc_bootmem(size);
-		kgsl_resources[1].start = __pa(addr);
-		kgsl_resources[1].end = kgsl_resources[1].start + size - 1;
-		pr_info("allocating %lu bytes at %p (%lx physical) for "
-			"KGSL\n", size, addr, __pa(addr));
-	}
-
+	
 	size = pmem_kernel_ebi1_size;
 	if (size) {
 		addr = alloc_bootmem_aligned(size, 0x100000);
@@ -9871,7 +9677,7 @@ MACHINE_START(MSM8X55_SURF, "QCT MSM8X55 SURF")
 	.timer = &msm_timer,
 MACHINE_END
 
-MACHINE_START(MSM8X55_FFA, "QCT MSM8X55 FFA")
+MACHINE_START(MSM8X55_FFA, "TRIUMPH")
 #ifdef CONFIG_MSM_DEBUG_UART
 	.phys_io  = MSM_DEBUG_UART_PHYS,
 	.io_pg_offst = ((MSM_DEBUG_UART_BASE) >> 18) & 0xfffc,

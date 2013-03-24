@@ -2892,8 +2892,6 @@ static int __init con_init(void)
 
 #ifdef CONFIG_VT_CONSOLE
 	register_console(&vt_console_driver);
-#else	// CONFIG_VT_CONSOLE
-	printk(KERN_INFO "no CONFIG_VT_CONSOLE\n");
 #endif
 	return 0;
 }

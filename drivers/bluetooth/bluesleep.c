@@ -62,19 +62,10 @@
 #define VERSION		"1.1"
 #define PROC_DIR	"bluetooth/sleep"
 
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-#define GPIO_BT_IRQ        147
-#define GPIO_BT_WAKEUP     170
-#endif
-
 struct bluesleep_info {
 	unsigned host_wake;
 	unsigned ext_wake;
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	int host_wake_irq;
-#else
 	unsigned host_wake_irq;
-#endif
 	struct uart_port *uport;
 };
 
@@ -157,17 +148,10 @@ static void hsuart_power(int on)
  */
 static inline int bluesleep_can_sleep(void)
 {
-
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	return (gpio_get_value(bsi->ext_wake)==0) &&
-		(gpio_get_value(bsi->host_wake)==0) &&
-		(bsi->uport != NULL);
-#else
 	/* check if MSM_WAKE_BT_GPIO and BT_WAKE_MSM_GPIO are both deasserted */
 	return gpio_get_value(bsi->ext_wake) &&
 		gpio_get_value(bsi->host_wake) &&
 		(bsi->uport != NULL);
-#endif
 }
 
 void bluesleep_sleep_wakeup(void)
@@ -176,11 +160,7 @@ void bluesleep_sleep_wakeup(void)
 		BT_DBG("waking up...");
 		/* Start the timer */
 		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-		gpio_set_value(bsi->ext_wake, 1);
-#else
 		gpio_set_value(bsi->ext_wake, 0);
-#endif
 		clear_bit(BT_ASLEEP, &flags);
 		/*Activating UART */
 		hsuart_power(1);
@@ -248,12 +228,8 @@ static void bluesleep_outgoing_data(void)
 	set_bit(BT_TXDATA, &flags);
 
 	/* if the tx side is sleeping... */
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	if (gpio_get_value(bsi->ext_wake)==0)
-#else
-	if (gpio_get_value(bsi->ext_wake))
-#endif
-	{
+	if (gpio_get_value(bsi->ext_wake)) {
+
 		BT_DBG("tx was sleeping");
 		bluesleep_sleep_wakeup();
 	}
@@ -314,11 +290,7 @@ static void bluesleep_tx_timer_expire(unsigned long data)
 	/* were we silent during the last timeout? */
 	if (!test_bit(BT_TXDATA, &flags)) {
 		BT_DBG("Tx has been idle");
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-		gpio_set_value(bsi->ext_wake, 0);
-#else
 		gpio_set_value(bsi->ext_wake, 1);
-#endif
 		bluesleep_tx_idle();
 	} else {
 		BT_DBG("Tx data during last period");
@@ -373,19 +345,11 @@ static int bluesleep_start(void)
 	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
 
 	/* assert BT_WAKE */
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	gpio_set_value(bsi->ext_wake, 1);
-	gpio_direction_input(bsi->host_wake);
-	retval = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-				"bluetooth hostwake", NULL);
-#else
 	gpio_set_value(bsi->ext_wake, 0);
 	retval = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
 				IRQF_DISABLED | IRQF_TRIGGER_FALLING,
 				"bluetooth hostwake", NULL);
-#endif
-	if (retval < 0) {
+	if (retval  < 0) {
 		BT_ERR("Couldn't acquire BT_HOST_WAKE IRQ");
 		goto fail;
 	}
@@ -421,11 +385,7 @@ static void bluesleep_stop(void)
 	}
 
 	/* assert BT_WAKE */
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	gpio_set_value(bsi->ext_wake, 1);
-#else
 	gpio_set_value(bsi->ext_wake, 0);
-#endif
 	del_timer(&tx_timer);
 	clear_bit(BT_PROTO, &flags);
 
@@ -630,19 +590,11 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_bt_host_wake;
 	/* assert bt wake */
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	ret = gpio_direction_output(bsi->ext_wake, 1);
-#else
 	ret = gpio_direction_output(bsi->ext_wake, 0);
-#endif
 	if (ret)
 		goto free_bt_ext_wake;
 
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	bsi->host_wake_irq = MSM_GPIO_TO_INT(bsi->host_wake);
-#else
 	bsi->host_wake_irq = platform_get_irq_byname(pdev, "host_wake");
-#endif
 	if (bsi->host_wake_irq < 0) {
 		BT_ERR("couldn't find host_wake irq\n");
 		ret = -ENODEV;
@@ -664,11 +616,7 @@ free_bsi:
 static int bluesleep_remove(struct platform_device *pdev)
 {
 	/* assert bt wake */
-#if defined(CONFIG_BROADCOM_BCM4329_BLUETOOTH)
-	gpio_set_value(bsi->ext_wake, 1);
-#else
 	gpio_set_value(bsi->ext_wake, 0);
-#endif
 	if (test_bit(BT_PROTO, &flags)) {
 		if (disable_irq_wake(bsi->host_wake_irq))
 			BT_ERR("Couldn't disable hostwake IRQ wakeup mode \n");

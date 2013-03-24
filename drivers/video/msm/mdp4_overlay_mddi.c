@@ -383,14 +383,18 @@ void mdp4_mddi_overlay_restore(void)
 
 	if (mddi_mfd->panel_power_on == 0)
 		return;
-	if (mddi_mfd && mddi_pipe) {
-		mdp4_mddi_dma_busy_wait(mddi_mfd, mddi_pipe);
-		mdp4_overlay_update_lcd(mddi_mfd);
-		mdp4_mddi_overlay_kickoff(mddi_mfd, mddi_pipe);
-		mddi_mfd->dma_update_flag = 1;
-	}
+
 	if (mdp_hw_revision < MDP4_REVISION_V2_1) /* need dmas dmap switch */
 		mdp4_mddi_overlay_dmas_restore();
+	else { /* no dmas dmap switch */
+		/* mutex holded by caller */
+		if (mddi_mfd && mddi_pipe) {
+			mdp4_mddi_dma_busy_wait(mddi_mfd, mddi_pipe);
+			mdp4_overlay_update_lcd(mddi_mfd);
+			mdp4_mddi_overlay_kickoff(mddi_mfd, mddi_pipe);
+			mddi_mfd->dma_update_flag = 1;
+		}
+	}
 }
 
 
@@ -449,20 +453,14 @@ void mdp4_mddi_kickoff_ui(struct msm_fb_data_type *mfd,
 {
 
 	if (mdp4_overlay_mixer_play(mddi_pipe->mixer_num) > 0) {
-		INIT_COMPLETION(mddi_delay_comp);
 #ifdef MDDI_TIMER
 		mddi_add_delay_timer(10);
 #endif
 		atomic_set(&mddi_delay_kickoff_cnt, 1);
+		INIT_COMPLETION(mddi_delay_comp);
 		mutex_unlock(&mfd->dma->ov_mutex);
 		wait_for_completion_killable(&mddi_delay_comp);
 		mutex_lock(&mfd->dma->ov_mutex);
-		/*
-		 * since mutex had been unlocked and locked again,
-		 * check dma busy is necessary to prevent dma
-		 * bging kicked off twice
-		 */
-		mdp4_mddi_dma_busy_wait(mfd, pipe);
 	}
 
 	mdp4_mddi_overlay_kickoff(mfd, pipe);

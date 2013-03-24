@@ -377,8 +377,7 @@ struct input_absinfo {
 
 #define KEY_WIMAX		246
 
-#define KEY_SILENT		237		//SW2-D5-AriesHuang-Silent Key on function implement+
-#define KEY_SILENTOFF	248		//SW2-D5-AriesHuang-Silent Key off function implement+
+#define KEY_SILENT		237		//SW2-D5-OwenHung-Silent Key function implement+
 #define KEY_COVERDET	247		//SW2-D5-AriesHuang-Cover Detect Key function implement+
 
 /* Range 248 - 255 is reserved for special needs of AT keyboard driver */
@@ -667,6 +666,7 @@ struct input_absinfo {
 #define ABS_MT_TOOL_TYPE	0x37	/* Type of touching device */
 #define ABS_MT_BLOB_ID		0x38	/* Group a set of packets as a blob */
 #define ABS_MT_TRACKING_ID	0x39	/* Unique ID of initiated contact */
+#define ABS_MT_PRESSURE		0x3a	/* Pressure on contact area */
 
 #define ABS_MAX			0x3f
 #define ABS_CNT			(ABS_MAX+1)

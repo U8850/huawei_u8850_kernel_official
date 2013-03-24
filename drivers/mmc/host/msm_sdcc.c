@@ -39,6 +39,7 @@
 #include <linux/memory.h>
 #include <linux/pm_runtime.h>
 #include <linux/wakelock.h>
+#include <linux/gpio.h>
 #include <linux/fs.h>
 #include <linux/pm.h>
 #include <linux/reboot.h>
@@ -81,6 +82,11 @@ static struct dentry *debugfs_dir;
 static struct dentry *debugfs_file;
 static int  msmsdcc_dbg_init(void);
 #endif
+
+// KD 2011-10-28 external definition for the libra driver flag
+// Note: This is initialized to zero (*not* loaded)
+static int libra_loaded = 0;
+EXPORT_SYMBOL(libra_loaded);
 
 static unsigned int msmsdcc_pwrsave = 1;
 static int support_sd_removal_turnoff = 1;
@@ -317,12 +323,14 @@ msmsdcc_dma_complete_tlet(unsigned long data)
 		if (host->dma.result & DMOV_RSLT_FLUSH)
 			pr_err("%s: DMA channel flushed (0x%.8x)\n",
 			       mmc_hostname(host->mmc), host->dma.result);
-		pr_err("Flush data: %.8x %.8x %.8x %.8x %.8x %.8x\n",
-			host->dma.err.flush[0], host->dma.err.flush[1],
-			host->dma.err.flush[2], host->dma.err.flush[3],
-			host->dma.err.flush[4],
-			host->dma.err.flush[5]);
-		msmsdcc_reset_and_restore(host);
+		if (host->dma.err) {
+			pr_err("Flush data: %.8x %.8x %.8x %.8x %.8x %.8x\n",
+			       host->dma.err->flush[0], host->dma.err->flush[1],
+			       host->dma.err->flush[2], host->dma.err->flush[3],
+			       host->dma.err->flush[4],
+			       host->dma.err->flush[5]);
+			msmsdcc_reset_and_restore(host);
+		}
 		if (!mrq->data->error)
 			mrq->data->error = -EIO;
 	}
@@ -399,8 +407,7 @@ msmsdcc_dma_complete_func(struct msm_dmov_cmd *cmd,
 	struct msmsdcc_host *host = dma_data->host;
 
 	dma_data->result = result;
-	if (err)
-		memcpy(&dma_data->err, err, sizeof(struct msm_dmov_errdata));
+	dma_data->err = err;
 
 	tasklet_schedule(&host->dma_tlet);
 }
@@ -918,13 +925,9 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 	void __iomem		*base = host->base;
 	uint32_t		status;
 
-	spin_lock(&host->lock);
-
 	status = readl(base + MMCISTATUS);
-	if (((readl(host->base + MMCIMASK0) & status) & (MCI_IRQ_PIO)) == 0) {
-		spin_unlock(&host->lock);
+	if (((readl(host->base + MMCIMASK0) & status) & (MCI_IRQ_PIO)) == 0)
 		return IRQ_NONE;
-	}
 
 	if (host->mmc->update_stats) {
 		host->mmc->entries[host->mmc->id].mci_sts |= status;
@@ -932,6 +935,8 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 #if IRQ_DEBUG
 	msmsdcc_print_status(host, "irq1-r", status);
 #endif
+
+	spin_lock(&host->lock);
 
 	do {
 		unsigned long flags;
@@ -1066,14 +1071,7 @@ msmsdcc_irq(int irq, void *dev_id)
 
 		if ((host->plat->dummy52_required) &&
 		    (host->dummy_52_state == DUMMY_52_STATE_SENT)) {
-			if (status & (MCI_PROGDONE | MCI_CMDCRCFAIL |
-					MCI_CMDTIMEOUT)) {
-				if (status & MCI_CMDTIMEOUT)
-					pr_debug("%s: dummy CMD52 timeout\n",
-						mmc_hostname(host->mmc));
-				if (status & MCI_CMDCRCFAIL)
-					pr_debug("%s: dummy CMD52 CRC failed\n",
-						mmc_hostname(host->mmc));
+			if (status & MCI_PROGDONE) {
 				host->dummy_52_state = DUMMY_52_STATE_NONE;
 				host->curr.cmd = NULL;
 				spin_unlock(&host->lock);
@@ -1482,15 +1480,10 @@ if (host->pdev_id != 3) {
 	}
 
 	if (!(clk & MCI_CLK_ENABLE) && host->clks_on) {
-		if (mmc->card && mmc->card->type == MMC_TYPE_SDIO) {
-			if (!host->plat->sdiowakeup_irq) {
-				writel(MCI_SDIOINTMASK, host->base + MMCIMASK0);
-				WARN_ON(host->sdcc_irq_disabled);
-				enable_irq_wake(host->irqres->start);
-			} else {
-				writel(0, host->base + MMCIMASK0);
-			}
-			msmsdcc_delay(host);
+		if (mmc->card && mmc->card->type == MMC_TYPE_SDIO &&
+				!host->plat->sdiowakeup_irq) {
+			writel(MCI_SDIOINTMASK, host->base + MMCIMASK0);
+			enable_irq_wake(host->irqres->start);
 		}
 		clk_disable(host->clk);
 		if (!IS_ERR(host->pclk))
@@ -1644,15 +1637,12 @@ msmsdcc_platform_sdiowakeup_irq(int irq, void *dev_id)
 	pr_info("%s: SDIO Wake up IRQ : %d\n", __func__, irq);
 	spin_lock(&host->lock);
 	if (!host->sdio_irq_disabled) {
+		wake_lock(&host->sdio_wlock);
 		disable_irq_nosync(irq);
-		if (host->mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ) {
-			wake_lock(&host->sdio_wlock);
-			disable_irq_wake(irq);
-		}
+		disable_irq_wake(irq);
 		host->sdio_irq_disabled = 1;
 	}
 	spin_unlock(&host->lock);
-
 	return IRQ_HANDLED;
 }
 
@@ -1744,20 +1734,76 @@ static struct attribute_group dev_attr_grp = {
 };
 //DIV5-CONN-MW-POWER SAVING MODE-01+[
 #if  defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
-//DIV5-CONN-MW-POWER SAVING MODE-02-[
+static void wimax_work(struct work_struct *work)
+{   
+       int wimax_on;
+       int H_WAKEUP;
+       int W_WAKEUP;
+	   
+        wimax_on = gpio_get_value(WiMAX_V3P8_FET_CTRL_N);
+        printk(KERN_INFO "%s: Get WiMAX_V3P8_FET_CTRL_N = %d\n", __func__, wimax_on);
+	   
 
-//DIV5-CONN-MW-POWER SAVING MODE-02-]
+        H_WAKEUP = gpio_get_value(WiMAX_WAKEUP_HOST_N);		
+        printk(KERN_INFO "%s: Get gpio 142(WiMAX_WAKEUP_HOST_N) = %d\n", __func__, H_WAKEUP);
+
+        W_WAKEUP = gpio_get_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N));
+        printk(KERN_INFO "%s: Get gpio 06(PMIC_HOST_WAKEUP_WiMAX_N) = %d\n", __func__, W_WAKEUP);
+        if(wimax_on == 1) //if wimax on
+        {
+
+            if (H_WAKEUP == 0) //H_WAKEUP is HIGH
+            {
+
+                    if (W_WAKEUP == 1) //H_WAKEUP is HIGH,,W_WAKEUP is HIGH
+                    {
+		 
+                         printk(KERN_INFO "%s: wake unlock by wimax , system suspend...\n", __func__);
+                    }
+                    else//H_WAKEUP is HIGH,W_WAKEUP is LOW
+                    {
+                         printk(KERN_INFO "%s: H_WAKEUP is HIGH,W_WAKEUP is LOW ...) \n", __func__);
+
+                    }
+			
+            }
+            else   //H_WAKEUP is LOW
+            {
+
+                    
+                    if (W_WAKEUP == 1) //H_WAKEUP is LOW,,W_WAKEUP is HIGH
+                    {
+
+                         printk(KERN_INFO "%s: wake-up by wimax !!!!!!!!) \n", __func__);
+                    }
+                    else//H_WAKEUP is LOW,,W_WAKEUP is LOW
+                    {
+                         printk(KERN_INFO "%s: H_WAKEUP is LOW,W_WAKEUP is LOW) \n", __func__);
+
+                    }             
+               
+            }
+
+         }
+		
+
+}
 
 static irqreturn_t WIMAX_wakeup_host_isr(int irq, void *dev_id)
 {
-	//struct msmsdcc_host	*host = dev_id;//DIV5-CONN-MW-POWER SAVING MODE-02-
+	struct msmsdcc_host	*host = dev_id;
         int wimax_on;
 
         wimax_on = gpio_get_value(WiMAX_V3P8_FET_CTRL_N);
         printk(KERN_INFO "%s: Get WiMAX_V3P8_FET_CTRL_N = %d\n", __func__, wimax_on);
-//DIV5-CONN-MW-POWER SAVING MODE-02-[
 
-//DIV5-CONN-MW-POWER SAVING MODE-02-]
+       if(wake_lock_active(&host->wimax_wakelock)) 
+       {
+		wake_unlock(&host->wimax_wakelock);    	
+		printk(KERN_INFO "%s: wake unlock by wimax , system suspend...\n", __func__);
+       }		
+	   
+      schedule_work(&host->work);
 	  
 	return IRQ_HANDLED;
 }
@@ -1770,10 +1816,44 @@ static void msmsdcc_early_suspend(struct early_suspend *h)
 	struct msmsdcc_host *host =
 		container_of(h, struct msmsdcc_host, early_suspend);
 	unsigned long flags;
-//DIV5-CONN-MW-POWER SAVING MODE-02-[
-
-//DIV5-CONN-MW-POWER SAVING MODE-02-]
-
+//DIV5-CONN-MW-POWER SAVING MODE-01+[
+#if  defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
+        int test_sus,wimax_on=0;       
+        if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
+        {
+            wimax_on = gpio_get_value(WiMAX_V3P8_FET_CTRL_N);
+            printk(KERN_INFO "%s: Get WiMAX_V3P8_FET_CTRL_N = %d\n", __func__, wimax_on);
+            if(wimax_on == 1) //if wimax on
+            {
+                test_sus = gpio_get_value(WiMAX_WAKEUP_HOST_N);
+                printk(KERN_INFO "%s: Get gpio 142(WiMAX_WAKEUP_HOST_N) = %d\n", __func__, test_sus);
+                if (test_sus == 1)
+                {
+                   if(wake_lock_active(&host->wimax_wakelock))
+                            wake_lock(&host->wimax_wakelock);
+                    printk(KERN_INFO "%s: wake lock by wimax...) \n", __func__);
+                    gpio_set_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N), 1);
+  
+                    printk(KERN_INFO "%s: Set PMIC gpio 16 output HIGH, IRQF_TRIGGER_FALLING.\n", __func__);
+                }
+                else
+                {
+                if(wake_lock_active(&host->wimax_wakelock))
+                    wake_unlock(&host->wimax_wakelock);
+                    printk(KERN_INFO "%s:wake_unlock.\n", __func__);		
+                }	
+    
+             }//end of if(wimax_on == 1) //if wimax on
+        }//end of    if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
+#endif
+//DIV5-CONN-MW-POWER SAVING MODE-01+]
+//KD 2010-10-26 - Hold wakelock on the Wlan interface while asleep
+	if (libra_loaded) {
+		wake_lock(&host->sdio_wlan_lock);
+		printk("%s: [msm_sdcc] wake_lock WLAN\n", mmc_hostname(host->mmc));
+	} else {
+		printk("%s: [msm_sdcc] NO wake_lock WLAN NOT loaded\n", mmc_hostname(host->mmc));
+	}	
 	spin_lock_irqsave(&host->lock, flags);
 	host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
 	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
@@ -1785,9 +1865,21 @@ static void msmsdcc_late_resume(struct early_suspend *h)
 		container_of(h, struct msmsdcc_host, early_suspend);
 	unsigned long flags;
 	unsigned int status;
-//DIV5-CONN-MW-POWER SAVING MODE-02-[
+//DIV5-CONN-MW-POWER SAVING MODE-01+[
+#if  defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
+        int wimax_on=0;
+        if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
+        {
+            wimax_on = gpio_get_value(WiMAX_V3P8_FET_CTRL_N);
+            if(wimax_on == 1) //if wimax on
+            {
+		gpio_set_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N), 0);
+		printk(KERN_INFO "%s: Set PMIC gpio 16 output LOW.\n", __func__);  
 
-//DIV5-CONN-MW-POWER SAVING MODE-02-]
+             }//end of if(wimax_on == 1)
+        }//end of   if ((fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
+#endif
+//DIV5-CONN-MW-POWER SAVING MODE-01+]
 	if(host->plat->status && host->plat->status_irq && host->pdev_id == 4)
 	{
 		status = host->plat->status(mmc_dev(host->mmc));
@@ -1809,7 +1901,13 @@ static void msmsdcc_late_resume(struct early_suspend *h)
 		}
 	}
 
-
+//KD 2010-10-26 - Release wakelock on the Wlan interface when resuming
+	if (libra_loaded) {
+		wake_unlock(&host->sdio_wlan_lock);
+		printk("%s: [msm_sdcc] wake_unlock WLAN\n", mmc_hostname(host->mmc));
+	} else {
+		printk("%s: [msm_sdcc] NO wake_unlock WLAN NOT loaded\n", mmc_hostname(host->mmc));
+	}
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
 		host->mmc->caps |= MMC_CAP_NEEDS_POLL;
@@ -1842,7 +1940,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	struct mmc_platform_data *plat = pdev->dev.platform_data;
 	struct msmsdcc_host *host;
 	struct mmc_host *mmc;
-	unsigned long flags;
 	struct resource *irqres = NULL;
 	struct resource *memres = NULL;
 	struct resource *dmares = NULL;
@@ -1982,7 +2079,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->max_phys_segs = NR_SG;
 	mmc->max_hw_segs = NR_SG;
 	mmc->max_blk_size = 4096;	/* MCI_DATA_CTL BLOCKSIZE up to 4096 */
-	mmc->max_blk_count = 65535;
+	mmc->max_blk_count = 65536;
 
 	mmc->max_req_size = 33554432;	/* MCI_DATA_LENGTH is 25 bits */
 	mmc->max_seg_size = mmc->max_req_size;
@@ -2006,8 +2103,6 @@ msmsdcc_probe(struct platform_device *pdev)
 		goto irq_free;
 
 	if (plat->sdiowakeup_irq) {
-		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
-			mmc_hostname(mmc));
 		ret = request_irq(plat->sdiowakeup_irq,
 			msmsdcc_platform_sdiowakeup_irq,
 			IRQF_SHARED | IRQF_TRIGGER_LOW,
@@ -2018,32 +2113,32 @@ msmsdcc_probe(struct platform_device *pdev)
 			goto pio_irq_free;
 		} else {
 			mmc->pm_caps |= MMC_PM_WAKE_SDIO_IRQ;
-			spin_lock_irqsave(&host->lock, flags);
-			if (!host->sdio_irq_disabled) {
-				disable_irq_nosync(plat->sdiowakeup_irq);
-				host->sdio_irq_disabled = 1;
-			}
-			spin_unlock_irqrestore(&host->lock, flags);
+			disable_irq(plat->sdiowakeup_irq);
+			wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
+					mmc_hostname(mmc));
 		}
 	}
 
 	wake_lock_init(&host->sdio_suspend_wlock, WAKE_LOCK_SUSPEND,
 			mmc_hostname(mmc));
+// KD 2010-10-26 - Init wake lock for the WLAN interface
+	wake_lock_init(&host->sdio_wlan_lock, WAKE_LOCK_SUSPEND,
+					mmc_hostname(mmc));
 
-//DIV5-CONN-MW-POWER SAVING MODE-02*[
+//DIV5-CONN-MW-POWER SAVING MODE-01+[
         #if defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
         if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
         {
             ret = request_irq(gpio_to_irq(WiMAX_WAKEUP_HOST_N),
                           WIMAX_wakeup_host_isr,
-                          (IRQF_TRIGGER_RISING),
+                          (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING),
                            "wimax_wakeup_host", host);
 
             wake_lock_init(&host->wimax_wakelock, WAKE_LOCK_SUSPEND,"wimax");
-            enable_irq_wake(gpio_to_irq(WiMAX_WAKEUP_HOST_N));//DIV5-CONN-MW-POWER SAVING MODE-02+
+            INIT_WORK(&host->work, wimax_work);
         }//end of if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
         #endif
-//DIV5-CONN-MW-POWER SAVING MODE-02*]
+//DIV5-CONN-MW-POWER SAVING MODE-01+]
 
 	/*
 	 * Setup card detect change
@@ -2125,10 +2220,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	register_early_suspend(&host->early_suspend);
 #endif
 
-	//#ifdef CONFIG_FIH_PROJECT_SF8
-	//	mmc->caps |= MMC_CAP_NEEDS_POLL;		
-	//#endif
-
 	pr_info("%s: Qualcomm MSM SDCC at 0x%016llx irq %d,%d dma %d\n",
 	       mmc_hostname(mmc), (unsigned long long)memres->start,
 	       (unsigned int) irqres->start,
@@ -2175,11 +2266,13 @@ msmsdcc_probe(struct platform_device *pdev)
 		free_irq(plat->status_irq, host);
  sdiowakeup_irq_free:
 	wake_lock_destroy(&host->sdio_suspend_wlock);
-	if (plat->sdiowakeup_irq)
+	if (plat->sdiowakeup_irq) {
+		wake_lock_destroy(&host->sdio_wlock);
 		free_irq(plat->sdiowakeup_irq, host);
+	}
+// KD 2010-10-26 Destroy wake lock on the WLAN interface on the way out
+	wake_lock_destroy(&host->sdio_wlan_lock);
  pio_irq_free:
- 	if (plat->sdiowakeup_irq)
- 		wake_lock_destroy(&host->sdio_wlock);
 	free_irq(irqres->start, host);
  irq_free:
 	free_irq(irqres->start, host);
@@ -2406,34 +2499,13 @@ static int msmsdcc_runtime_idle(struct device *dev)
 
 	return -EAGAIN;
 }
-  //DIV5-CONN-MW-POWER SAVING MODE-04+[
-#if defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
-#include <mach/gpio.h>
-#include "../../../arch/arm/mach-msm/smd_private.h"
-#include <linux/kernel.h>
-#include <linux/delay.h>
-
-#define WiMAX_WAKEUP_HOST_N    142
-#define PMIC_HOST_WAKEUP_WiMAX_N    15 /* PMIC GPIO Number 16 */
-#define WiMAX_V3P8_FET_CTRL_N  148
-#define PM8058_GPIO_PM_TO_SYS(pm_gpio)     (pm_gpio + NR_GPIO_IRQS)
-/* cpu currently holding logbuf_lock */
-static volatile unsigned int printk_cpu = UINT_MAX;
-#endif
-//DIV5-CONN-MW-POWER SAVING MODE-04+]
 
 static int msmsdcc_pm_suspend(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	int rc = 0;
-//DIV5-CONN-MW-POWER SAVING MODE-04+[
-#if defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)	
-	int i,test_sus,wimax_on=0; 
-	unsigned long long t, t1;
-	unsigned long nanosec_rem, nanosec_rem1;
-#endif
-//DIV5-CONN-MW-POWER SAVING MODE-04+]
+
 	if (host->plat->status_irq)
 	{
 		if(host->pdev_id == 4) 
@@ -2450,129 +2522,16 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	if (!pm_runtime_suspended(dev))
 		rc = msmsdcc_runtime_suspend(dev);
 
-//DIV5-CONN-MW-POWER SAVING MODE-05*[
- #if defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
-    if(strcmp(mmc_hostname(host->mmc), "mmc2")==0)
-    {
-	    if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
-		{
-			wimax_on = gpio_get_value(WiMAX_V3P8_FET_CTRL_N);			
-			if(wimax_on == 1) //if wimax on
-			{	
-				for(i=0;i<1;i++)
-				{
-					gpio_set_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N), 1);
-					printk(KERN_INFO "%s: Set PMIC gpio 06 output HIGH.\n", __func__);
-					t = cpu_clock(printk_cpu);
-					nanosec_rem = do_div(t, 1000000000); 				  					
-			        for(;;)
-				    {
-						t1 = cpu_clock(printk_cpu);
-						nanosec_rem1 = do_div(t1, 1000000000);			   						
-						mdelay(100);
-				        test_sus=gpio_get_value(WiMAX_WAKEUP_HOST_N);
-						printk(KERN_INFO "%s: Get gpio 142(WiMAX_WAKEUP_HOST_N) = %d\n", __func__, test_sus);
-						   
-				        if(test_sus==0 )
-				        {
-							printk(KERN_INFO "%s: GDM enter suspend OK.\n", __func__);
-					        break;
-				        }	
-						if( (t1-t) >= 1 )
-						{
-							printk(KERN_INFO "%s:loop %d : GDM suspend fail. Set back PMIC gpio 06 output to low.\n", __func__,i);	
-							gpio_set_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N), 0);						   
-							mdelay(100);				
-							break;
-						}
-					}//eof	  for(;;)
-			    }//end of	  for(i=0;i<2;i++)
-		    }//end of if(wimax_on == 1) //if wimax on
-		}//end of	 if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
-    }//end of    if(strcmp(mmc_hostname(host->mmc), "mmc2")==0)
-#endif		
-//DIV5-CONN-MW-POWER SAVING MODE-05*]
-
-
 	return rc;
 }
-//DIV5-CONN-MW-POWER SAVING MODE-06+[	
-#if defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
-enum {
-             GDM_SYS_SUSPEND = 1,
-             GDM_SYS_RESUME,
-             GDM_WIMAX_SUSPEND,
-             GDM_WIMAX_RESUME
-};
 
-void (*gdm_wimax_pm_event)(int);
-EXPORT_SYMBOL(gdm_wimax_pm_event);
-#endif
-//DIV5-CONN-MW-POWER SAVING MODE-06+]
 static int msmsdcc_pm_resume(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	int rc = 0;
-//DIV5-CONN-MW-POWER SAVING MODE-02-[
 
-//DIV5-CONN-MW-POWER SAVING MODE-02-]
-//DIV5-CONN-MW-POWER SAVING MODE-08*[
- #if defined(CONFIG_FIH_PROJECT_SF4Y6) && defined(CONFIG_FIH_WIMAX_GCT_SDIO)
-	int i,test_res,wimax_on=0; 
-	unsigned long long t, t1;
-	unsigned long nanosec_rem, nanosec_rem1;
-    if(strcmp(mmc_hostname(host->mmc), "mmc2")==0)
-    { 
-		if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))
-		{
-			wimax_on = gpio_get_value(WiMAX_V3P8_FET_CTRL_N);
-			if(wimax_on == 1) //if wimax on
-			{
-				for(i=0;i<1;i++)
-				{
-					gpio_set_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N), 0);
-					printk(KERN_INFO "%s: Set PMIC gpio 06 output LOW.\n", __func__);
-					t = cpu_clock(printk_cpu);
-					nanosec_rem = do_div(t, 1000000000);
-			        for(;;)
-				    {
-						t1 = cpu_clock(printk_cpu);
-						nanosec_rem1 = do_div(t1, 1000000000);			   
-						mdelay(100);
-				        test_res=gpio_get_value(WiMAX_WAKEUP_HOST_N);
-						printk(KERN_INFO "%s: Get gpio 142(WiMAX_WAKEUP_HOST_N) = %d\n", __func__, test_res);
-						   
-				        if(test_res==1 )
-				        {
-							printk(KERN_INFO "%s: GDM resume OK.\n", __func__);
-                            if (gdm_wimax_pm_event)	
-                            {
-                                gdm_wimax_pm_event(GDM_WIMAX_RESUME);
-                                printk(KERN_INFO "%s: --> gdm_wimax_pm_event(GDM_WIMAX_RESUME) \n", __func__);  	
-                            }
-                            else{
-							    printk(KERN_INFO "%s: --> gdm_wimax_pm_event == NULL.\n", __func__);  
-							}							
-					        break;
-				        }
-						if( (t1-t) >= 1 )
-						{
-						    printk(KERN_INFO "%s:loop %d : GDM resume fail. Set back PMIC gpio 06 output high.\n", __func__,i);
-							gpio_set_value(PM8058_GPIO_PM_TO_SYS(PMIC_HOST_WAKEUP_WiMAX_N), 1);							  
-						    mdelay(100);				
-							break;
-						}
-					}//eof	  for(;;)						
-			    }//end of	  for(i=0;i<1;i++)
-		    }//end of if(wimax_on == 1) //if wimax on
-	    }//end of	 if( (fih_get_product_id() == Product_SF6) &&  (fih_get_product_phase() >= Product_PR3))		
-    }//end of     if(strcmp(mmc_hostname(host->mmc), "mmc2")==0)			
-#endif		
-//DIV5-CONN-MW-POWER SAVING MODE-08*]
-
-	if (!pm_runtime_suspended(dev))
-		rc = msmsdcc_runtime_resume(dev);
+	rc = msmsdcc_runtime_resume(dev);
 	if (host->plat->status_irq)
 	{
 		if(host->pdev_id == 4) 				
@@ -2581,9 +2540,13 @@ static int msmsdcc_pm_resume(struct device *dev)
 		enable_irq(host->plat->status_irq);
 	}
 
-//DIV5-CONN-MW-POWER SAVING MODE-02-[
-
-//DIV5-CONN-MW-POWER SAVING MODE-02-]
+	/* Update the run-time PM status */
+	pm_runtime_disable(dev);
+	rc = pm_runtime_set_active(dev);
+	if (rc < 0)
+		pr_info("%s: %s: failed with error %d", mmc_hostname(mmc),
+				__func__, rc);
+	pm_runtime_enable(dev);
 
 	return rc;
 }

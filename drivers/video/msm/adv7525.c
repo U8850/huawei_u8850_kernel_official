@@ -60,9 +60,7 @@ static bool dsp_mode_found = FALSE;
 #endif
 static bool read_edid = TRUE;
 static bool hdmi_dvi_mode = FALSE; ///TRUE:DVI FALSE:HDMI
-#ifndef CONFIG_FIH_FTM
 extern bool hdmi_online;
-#endif
 static int plugin_counter= 0;
 static int change_hdmi_counter = 0;
 bool chip_power_on = FALSE;
@@ -84,10 +82,9 @@ static void hdmi_default_video_format(void);
 #ifdef CONFIG_FB_MSM_HDMI_ADV7525_PANEL_HDCP_SUPPORT
 struct proc_dir_entry *hdmi_hdcp;
 static struct work_struct hdcp_handle_work;
-uint32 enable_hdcp = 0;  ///0:disable HDCP 1:enable HDCP;
+uint32 enable_hdcp = 1;  ///0:disable HDCP 1:enable HDCP;
 static int hdcp_started;
 static int hdcp_active;
-static bool hdcp_init = FALSE;
 #endif
 /* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */
 struct hdmi_data {
@@ -446,7 +443,6 @@ static int create_hdmi_state_kobj(void)
 }
 
 /* Change HDMI state */
-#ifndef CONFIG_FIH_FTM 
 static int change_hdmi_state(int online)
 {
 	int ret;
@@ -460,7 +456,7 @@ static int change_hdmi_state(int online)
 	hdmi_state_obj->hdmi_connection_state = online;
 	return 0;
 }
-#endif
+
 
 /*
  * Read a value from a register on ADV7525 device
@@ -845,11 +841,6 @@ static void adv7525_close_hdcp_link(void)
 
 static void adv7525_hdcp_enable(struct work_struct *work)
 {
-    if(hdcp_init){
-        hdcp_init = FALSE;
-		return;        
-    }
-        
 	printk("%s: Start reg[0xaf]=%02x (mute audio)\n",
 		__func__, reg[0xaf]);
 
@@ -1382,9 +1373,7 @@ static void adv7525_handle_cable_work(struct work_struct *work)
 {
 	   if (monitor_plugin) {  
 	    if(change_hdmi_counter<1){
-#ifndef CONFIG_FIH_FTM	        
         change_hdmi_state(1);
-#endif        
         change_hdmi_counter++;
 		fqc_hpd_state = 1;
 		///wake_lock(&hdmi_state_obj->wlock);
@@ -1407,27 +1396,18 @@ static void adv7525_handle_cable_work(struct work_struct *work)
 				__func__);
 	} else {
         if(chip_power_on){
-           if(change_hdmi_counter>0){      
-#ifndef CONFIG_FIH_FTM                    
+           if(change_hdmi_counter>0){              
 		      change_hdmi_state(0);	
-#endif		      
 		      change_hdmi_counter = 0;
 		    }   
 		}
-#ifndef CONFIG_FIH_FTM		
-	    while(hdmi_online){      
-         msleep(500); 
-        }				
-#endif        
 /* FIHTDC, Div2-SW2-BSP SungSCLee, HDMI { */		
 		adv7525_chip_off();	
         read_edid = TRUE;
 		chip_power_on = FALSE;		
         hdmi_dvi_mode = FALSE;
-#ifndef CONFIG_FIH_FTM        
         if(video_format != HDMI_VFRMT_1280x720p60_16_9)		
              hdmi_default_video_format();	
-#endif             
         for(;clk_enable_counter >0 ;clk_enable_counter--){ ///It's a workaround method that is the Qualcomm issue 
 		msleep(500);
 	    clk_disable(tv_enc_clk);
@@ -1442,11 +1422,9 @@ static void adv7525_handle_cable_work(struct work_struct *work)
 	    ///wake_unlock(&hdmi_state_obj->wlock);	
 /* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */		
 		plugin_counter = 0; 
-#ifndef CONFIG_FIH_FTM		
 	    while(hdmi_online){      
          msleep(500); 
-        }			         	
-#endif        
+        }		         	
 		printk(KERN_DEBUG "\n %s Power OFF from Interrupt handler \n",
 				__func__);
 	}
@@ -2019,11 +1997,8 @@ static int __init adv7525_init(void)
 	mdp_tv_clk = clk_get(NULL, "mdp_tv_clk");
 	if (IS_ERR(mdp_tv_clk))
 		mdp_tv_clk = NULL;
-
-#ifdef CONFIG_FB_MSM_HDMI_ADV7525_PANEL_HDCP_SUPPORT
-    hdcp_init = TRUE;			        	
-#endif    
-/* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */    
+/* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */
+			        	
 	return 0;
 
 init_exit:

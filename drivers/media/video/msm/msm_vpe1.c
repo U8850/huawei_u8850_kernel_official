@@ -20,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <mach/irqs.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 #include "msm_vpe1.h"
 #include <mach/msm_reqs.h>
 #include <linux/pm_qos_params.h>
@@ -27,10 +28,30 @@
 #include <mach/clk.h>
 #include <asm/div64.h>
 
+static int vpe_enable(uint32_t);
+static int vpe_disable(void);
 static int vpe_update_scaler(struct video_crop_t *pcrop);
 static struct vpe_device_type  vpe_device_data;
 static struct vpe_device_type  *vpe_device;
 struct vpe_ctrl_type    *vpe_ctrl;
+char *vpe_general_cmd[] = {
+	"VPE_DUMMY_0",  /* 0 */
+	"VPE_SET_CLK",
+	"VPE_RESET",
+	"VPE_START",
+	"VPE_ABORT",
+	"VPE_OPERATION_MODE_CFG",  /* 5 */
+	"VPE_INPUT_PLANE_CFG",
+	"VPE_OUTPUT_PLANE_CFG",
+	"VPE_INPUT_PLANE_UPDATE",
+	"VPE_SCALE_CFG_TYPE",
+	"VPE_ROTATION_CFG_TYPE",  /* 10 */
+	"VPE_AXI_OUT_CFG",
+	"VPE_CMD_DIS_OFFSET_CFG",
+	"VPE_ENABLE",
+	"VPE_DISABLE",
+};
+static uint32_t orig_src_y, orig_src_cbcr;
 
 #define CHECKED_COPY_FROM_USER(in) {					\
 	if (copy_from_user((in), (void __user *)cmd->value,		\
@@ -94,7 +115,7 @@ void vpe_reset_state_variables(void)
 {
 	/* initialize local variables for state control, etc.*/
 	vpe_ctrl->op_mode = 0;
-	vpe_ctrl->state = 0;
+	vpe_ctrl->state = VPE_STATE_INIT;
 	spin_lock_init(&vpe_ctrl->tasklet_lock);
 	spin_lock_init(&vpe_ctrl->state_lock);
 	INIT_LIST_HEAD(&vpe_ctrl->tasklet_q);
@@ -677,18 +698,32 @@ static int vpe_update_scaler_with_dis(struct video_crop_t *pcrop,
 	return 1;
 }
 
-void msm_send_frame_to_vpe(uint32_t pyaddr, uint32_t pcbcraddr,
-				struct timespec *ts)
+void msm_send_frame_to_vpe(uint32_t p0_phy_add, uint32_t p1_phy_add,
+		struct timespec *ts, int output_type)
 {
-	uint32_t temp_pyaddr, temp_pcbcraddr;
-	CDBG("vpe input, pyaddr = 0x%x, pcbcraddr = 0x%x\n",
-		pyaddr, pcbcraddr);
-	msm_io_w(pyaddr, vpe_device->vpebase + VPE_SRCP0_ADDR_OFFSET);
-	msm_io_w(pcbcraddr, vpe_device->vpebase + VPE_SRCP1_ADDR_OFFSET);
-	if (vpe_ctrl->state == 1)
+	uint32_t temp_pyaddr = 0, temp_pcbcraddr = 0;
+
+	CDBG("vpe input, p0_phy_add = 0x%x, p1_phy_add = 0x%x\n",
+		p0_phy_add, p1_phy_add);
+	msm_io_w(p0_phy_add, vpe_device->vpebase + VPE_SRCP0_ADDR_OFFSET);
+	msm_io_w(p1_phy_add, vpe_device->vpebase + VPE_SRCP1_ADDR_OFFSET);
+
+	if (vpe_ctrl->state == VPE_STATE_ACTIVE)
 		CDBG(" =====VPE is busy!!!  Wrong!========\n");
-	else
+
+	if (output_type != OUTPUT_TYPE_ST_R)
 		vpe_ctrl->ts = *ts;
+
+	if (output_type == OUTPUT_TYPE_ST_L) {
+		vpe_ctrl->pcbcr_before_dis = msm_io_r(vpe_device->vpebase +
+			VPE_OUTP1_ADDR_OFFSET);
+		temp_pyaddr = msm_io_r(vpe_device->vpebase +
+			VPE_OUTP0_ADDR_OFFSET);
+		temp_pcbcraddr = temp_pyaddr + PAD_TO_2K(vpe_ctrl->out_w *
+			vpe_ctrl->out_h * 2, vpe_ctrl->pad_2k_bool);
+		msm_io_w(temp_pcbcraddr, vpe_device->vpebase +
+			VPE_OUTP1_ADDR_OFFSET);
+	}
 
 	if (vpe_ctrl->dis_en) {
 		/* Changing the VPE output CBCR address,
@@ -702,7 +737,8 @@ void msm_send_frame_to_vpe(uint32_t pyaddr, uint32_t pcbcraddr,
 			VPE_OUTP1_ADDR_OFFSET);
 	}
 
-	vpe_ctrl->state = 1;
+	vpe_ctrl->output_type = output_type;
+	vpe_ctrl->state = VPE_STATE_ACTIVE;
 	vpe_start();
 }
 
@@ -712,10 +748,30 @@ static int vpe_proc_general(struct msm_vpe_cmd *cmd)
 	uint32_t *cmdp = NULL;
 	struct msm_queue_cmd *qcmd = NULL;
 	struct msm_vpe_buf_info *vpe_buf;
+	int turbo_mode = 0;
 	struct msm_sync *sync = (struct msm_sync *)vpe_ctrl->syncdata;
-	CDBG("vpe_proc_general: cmdID = %d, length = %d\n",
-		cmd->id, cmd->length);
+	CDBG("vpe_proc_general: cmdID = %s, length = %d\n",
+		vpe_general_cmd[cmd->id], cmd->length);
 	switch (cmd->id) {
+	case VPE_ENABLE:
+		cmdp = kmalloc(cmd->length, GFP_ATOMIC);
+		if (!cmdp) {
+			rc = -ENOMEM;
+			goto vpe_proc_general_done;
+		}
+		if (copy_from_user(cmdp,
+			(void __user *)(cmd->value),
+			cmd->length)) {
+			rc = -EFAULT;
+			goto vpe_proc_general_done;
+		}
+		turbo_mode = *((int *)(cmd->value));
+		rc = turbo_mode ? vpe_enable(VPE_TURBO_MODE_CLOCK_RATE)
+			: vpe_enable(VPE_NORMAL_MODE_CLOCK_RATE);
+		break;
+	case VPE_DISABLE:
+		rc = vpe_disable();
+		break;
 	case VPE_RESET:
 	case VPE_ABORT:
 		rc = vpe_reset();
@@ -806,6 +862,7 @@ static int vpe_proc_general(struct msm_vpe_cmd *cmd)
 		qcmd = msm_dequeue_vpe(&sync->vpe_q, list_vpe_frame);
 		if (!qcmd) {
 			pr_err("%s: no video frame.\n", __func__);
+			kfree(cmdp);
 			return -EAGAIN;
 		}
 		vdata = (struct msm_vfe_resp *)(qcmd->command);
@@ -813,8 +870,8 @@ static int vpe_proc_general(struct msm_vpe_cmd *cmd)
 		vpe_update_scaler_with_dis(&(vpe_buf->vpe_crop),
 					&(vpe_ctrl->dis_offset));
 
-		msm_send_frame_to_vpe(vpe_buf->y_phy, vpe_buf->cbcr_phy,
-						&(vpe_buf->ts));
+		msm_send_frame_to_vpe(vpe_buf->p0_phy, vpe_buf->p1_phy,
+						&(vpe_buf->ts), OUTPUT_TYPE_V);
 
 		if (!qcmd || !atomic_read(&qcmd->on_heap))
 			return -EAGAIN;
@@ -834,34 +891,27 @@ vpe_proc_general_done:
 static void vpe_addr_convert(struct msm_vpe_phy_info *pinfo,
 	enum vpe_resp_msg type, void *data, void **ext, int32_t *elen)
 {
-	uint8_t outid;
+	CDBG("In vpe_addr_convert type = %d\n", type);
 	switch (type) {
 	case VPE_MSG_OUTPUT_V:
-		pinfo->output_id =
-			((struct vpe_message *)data)->_u.msgOut.output_id;
-
-		switch (type) {
-		case VPE_MSG_OUTPUT_V:
-			outid = OUTPUT_TYPE_V;
-			CDBG("In vpe_addr_convert outid = %d \n", outid);
-			break;
-
-		default:
-			outid = 0xff;
-			break;
-		}
-		pinfo->output_id = outid;
-		pinfo->y_phy =
-			((struct vpe_message *)data)->_u.msgOut.yBuffer;
-		pinfo->cbcr_phy =
-			((struct vpe_message *)data)->_u.msgOut.cbcrBuffer;
-		*ext  = vpe_ctrl->extdata;
-		*elen = vpe_ctrl->extlen;
+		pinfo->output_id = OUTPUT_TYPE_V;
 		break;
-
+	case VPE_MSG_OUTPUT_ST_R:
+		/* output_id will be used by user space only. */
+		pinfo->output_id = OUTPUT_TYPE_V;
+		break;
 	default:
 		break;
 	} /* switch */
+
+	CDBG("In vpe_addr_convert output_id = %d\n", pinfo->output_id);
+
+	pinfo->p0_phy =
+		((struct vpe_message *)data)->_u.msgOut.p0_Buffer;
+	pinfo->p1_phy =
+		((struct vpe_message *)data)->_u.msgOut.p1_Buffer;
+	*ext  = vpe_ctrl->extdata;
+	*elen = vpe_ctrl->extlen;
 }
 
 void vpe_proc_ops(uint8_t id, void *msg, size_t len)
@@ -954,35 +1004,70 @@ int msm_vpe_config(struct msm_vpe_cfg_cmd *cmd, void *data)
 	return rc;
 }
 
-static void vpe_send_outmsg(uint8_t msgid, uint32_t pyaddr,
-	uint32_t pcbcraddr)
+void msm_vpe_offset_update(int frame_pack, uint32_t pyaddr, uint32_t pcbcraddr,
+	struct timespec *ts, int output_id, struct msm_st_half st_half,
+	int frameid)
+{
+	struct msm_vpe_buf_info vpe_buf;
+	uint32_t input_stride;
+
+	vpe_buf.vpe_crop.in2_w = st_half.stCropInfo.in_w;
+	vpe_buf.vpe_crop.in2_h = st_half.stCropInfo.in_h;
+	vpe_buf.vpe_crop.out2_w = st_half.stCropInfo.out_w;
+	vpe_buf.vpe_crop.out2_h = st_half.stCropInfo.out_h;
+	vpe_ctrl->dis_offset.dis_offset_x = st_half.pix_x_off;
+	vpe_ctrl->dis_offset.dis_offset_y = st_half.pix_y_off;
+	vpe_ctrl->dis_offset.frame_id = frameid;
+	vpe_ctrl->frame_pack = frame_pack;
+	vpe_ctrl->output_type = output_id;
+
+	input_stride = (st_half.buf_p1_stride * (1<<16)) +
+		st_half.buf_p0_stride;
+
+	msm_io_w(input_stride, vpe_device->vpebase + VPE_SRC_YSTRIDE1_OFFSET);
+
+	vpe_update_scaler_with_dis(&(vpe_buf.vpe_crop),
+		&(vpe_ctrl->dis_offset));
+
+	msm_send_frame_to_vpe(pyaddr, pcbcraddr, ts, output_id);
+}
+
+static void vpe_send_outmsg(uint8_t msgid, uint32_t p0_addr,
+	uint32_t p1_addr, uint32_t p2_addr)
 {
 	struct vpe_message msg;
 	uint8_t outid;
 	msg._d = outid = msgid;
 	msg._u.msgOut.output_id   = msgid;
-	msg._u.msgOut.yBuffer     = pyaddr;
-	msg._u.msgOut.cbcrBuffer  = pcbcraddr;
+	msg._u.msgOut.p0_Buffer = p0_addr;
+	msg._u.msgOut.p1_Buffer = p1_addr;
+	msg._u.msgOut.p2_Buffer = p2_addr;
 	vpe_proc_ops(outid, &msg, sizeof(struct vpe_message));
 	return;
 }
 
 int msm_vpe_reg(struct msm_vpe_callback *presp)
 {
-
 	if (presp && presp->vpe_resp)
 		vpe_ctrl->resp = presp;
-		/*
-		CDBG("vpe_ctrl->resp = %x \n", vpe_ctrl->resp);
-		*/
 
 	return 0;
+}
+
+static void vpe_send_msg_no_payload(enum VPE_MESSAGE_ID id)
+{
+	struct vpe_message msg;
+
+	CDBG("vfe31_send_msg_no_payload\n");
+	msg._d = id;
+	vpe_proc_ops(id, &msg, 0);
 }
 
 static void vpe_do_tasklet(unsigned long data)
 {
 	unsigned long flags;
-	uint32_t pyaddr, pcbcraddr, src_y, src_cbcr, temp;
+	uint32_t pyaddr = 0, pcbcraddr = 0;
+	uint32_t src_y, src_cbcr, temp;
 
 	struct vpe_isr_queue_cmd_type *qcmd = NULL;
 
@@ -1002,34 +1087,108 @@ static void vpe_do_tasklet(unsigned long data)
 
 	/* interrupt to be processed,  *qcmd has the payload.  */
 	if (qcmd->irq_status & 0x1) {
-		CDBG("vpe plane0 frame done.\n");
+		if (vpe_ctrl->output_type == OUTPUT_TYPE_ST_L) {
+			CDBG("vpe left frame done.\n");
+			vpe_ctrl->output_type = 0;
+			CDBG("vpe send out msg.\n");
+			orig_src_y = msm_io_r(vpe_device->vpebase +
+				VPE_SRCP0_ADDR_OFFSET);
+			orig_src_cbcr = msm_io_r(vpe_device->vpebase +
+				VPE_SRCP1_ADDR_OFFSET);
 
-		pyaddr =
-			msm_io_r(vpe_device->vpebase + VPE_OUTP0_ADDR_OFFSET);
-		pcbcraddr =
-			msm_io_r(vpe_device->vpebase + VPE_OUTP1_ADDR_OFFSET);
+			pyaddr = msm_io_r(vpe_device->vpebase +
+				VPE_OUTP0_ADDR_OFFSET);
+			pcbcraddr = msm_io_r(vpe_device->vpebase +
+				VPE_OUTP1_ADDR_OFFSET);
+			CDBG("%s: out_w = %d, out_h = %d\n", __func__,
+				vpe_ctrl->out_w, vpe_ctrl->out_h);
+
+			if ((vpe_ctrl->frame_pack == TOP_DOWN_FULL) ||
+				(vpe_ctrl->frame_pack == TOP_DOWN_HALF)) {
+				msm_io_w(pyaddr + (vpe_ctrl->out_w *
+					vpe_ctrl->out_h), vpe_device->vpebase +
+					VPE_OUTP0_ADDR_OFFSET);
+				msm_io_w(pcbcraddr + (vpe_ctrl->out_w *
+					vpe_ctrl->out_h/2),
+					vpe_device->vpebase +
+					VPE_OUTP1_ADDR_OFFSET);
+			} else if ((vpe_ctrl->frame_pack ==
+				SIDE_BY_SIDE_HALF) || (vpe_ctrl->frame_pack ==
+				SIDE_BY_SIDE_FULL)) {
+				msm_io_w(pyaddr + vpe_ctrl->out_w,
+					vpe_device->vpebase +
+					VPE_OUTP0_ADDR_OFFSET);
+				msm_io_w(pcbcraddr + vpe_ctrl->out_w,
+					vpe_device->vpebase +
+					VPE_OUTP1_ADDR_OFFSET);
+			} else
+				CDBG("%s: Invalid packing = %d\n", __func__,
+					vpe_ctrl->frame_pack);
+
+			vpe_send_msg_no_payload(MSG_ID_VPE_OUTPUT_ST_L);
+			vpe_ctrl->state = VPE_STATE_INIT;
+			kfree(qcmd);
+			return;
+		} else if (vpe_ctrl->output_type == OUTPUT_TYPE_ST_R) {
+			src_y = orig_src_y;
+			src_cbcr = orig_src_cbcr;
+			CDBG("%s: out_w = %d, out_h = %d\n", __func__,
+				vpe_ctrl->out_w, vpe_ctrl->out_h);
+
+			if ((vpe_ctrl->frame_pack == TOP_DOWN_FULL) ||
+				(vpe_ctrl->frame_pack == TOP_DOWN_HALF)) {
+				pyaddr = msm_io_r(vpe_device->vpebase +
+					VPE_OUTP0_ADDR_OFFSET) -
+					(vpe_ctrl->out_w * vpe_ctrl->out_h);
+			} else if ((vpe_ctrl->frame_pack ==
+				SIDE_BY_SIDE_HALF) || (vpe_ctrl->frame_pack ==
+				SIDE_BY_SIDE_FULL)) {
+				pyaddr = msm_io_r(vpe_device->vpebase +
+				VPE_OUTP0_ADDR_OFFSET) - vpe_ctrl->out_w;
+			} else
+				CDBG("%s: Invalid packing = %d\n", __func__,
+					vpe_ctrl->frame_pack);
+
+			pcbcraddr = vpe_ctrl->pcbcr_before_dis;
+		} else {
+			src_y =	msm_io_r(vpe_device->vpebase +
+				VPE_SRCP0_ADDR_OFFSET);
+			src_cbcr = msm_io_r(vpe_device->vpebase +
+				VPE_SRCP1_ADDR_OFFSET);
+			pyaddr = msm_io_r(vpe_device->vpebase +
+				VPE_OUTP0_ADDR_OFFSET);
+			pcbcraddr = msm_io_r(vpe_device->vpebase +
+				VPE_OUTP1_ADDR_OFFSET);
+		}
 
 		if (vpe_ctrl->dis_en)
 			pcbcraddr = vpe_ctrl->pcbcr_before_dis;
-
-		src_y =
-			msm_io_r(vpe_device->vpebase + VPE_SRCP0_ADDR_OFFSET);
-		src_cbcr =
-			msm_io_r(vpe_device->vpebase + VPE_SRCP1_ADDR_OFFSET);
 
 		msm_io_w(src_y,
 				vpe_device->vpebase + VPE_OUTP0_ADDR_OFFSET);
 		msm_io_w(src_cbcr,
 				vpe_device->vpebase + VPE_OUTP1_ADDR_OFFSET);
 
-		temp = msm_io_r(
-		vpe_device->vpebase + VPE_OP_MODE_OFFSET) & 0xFFFFFFFC;
+		temp = msm_io_r(vpe_device->vpebase + VPE_OP_MODE_OFFSET) &
+			0xFFFFFFFC;
 		msm_io_w(temp, vpe_device->vpebase + VPE_OP_MODE_OFFSET);
-		CDBG("vpe send out msg.\n");
+
 		/*  now pass this frame to msm_camera.c. */
-		vpe_send_outmsg(MSG_ID_VPE_OUTPUT_V, pyaddr, pcbcraddr);
-		vpe_ctrl->state = 0;   /* put it back to idle. */
+		if (vpe_ctrl->output_type == OUTPUT_TYPE_ST_R) {
+			CDBG("vpe send out R msg.\n");
+			vpe_send_outmsg(MSG_ID_VPE_OUTPUT_ST_R, pyaddr,
+				pcbcraddr, pyaddr);
+		} else if (vpe_ctrl->output_type == OUTPUT_TYPE_V) {
+			CDBG("vpe send out V msg.\n");
+			vpe_send_outmsg(MSG_ID_VPE_OUTPUT_V, pyaddr,
+				pcbcraddr, pyaddr);
+		}
+
+		vpe_ctrl->output_type = 0;
+		vpe_ctrl->state = VPE_STATE_INIT;   /* put it back to idle. */
+
 	}
+	kfree(qcmd);
 }
 DECLARE_TASKLET(vpe_tasklet, vpe_do_tasklet, 0);
 
@@ -1092,18 +1251,9 @@ int msm_vpe_open(void)
 		pr_err("%s: no memory!\n", __func__);
 		return -ENOMEM;
 	}
-	/* don't change the order of clock and irq.*/
-	CDBG("%s: enable_clock \n", __func__);
-	rc = msm_camio_vpe_clk_enable();
 
-	CDBG("%s: enable_irq \n", __func__);
-	vpe_enable_irq();
-
-	/* initialize the data structure - lock, queue etc. */
-	spin_lock_init(&vpe_ctrl->tasklet_lock);
-	INIT_LIST_HEAD(&vpe_ctrl->tasklet_q);
-
-	CDBG("%s: Out \n", __func__);
+	spin_lock_init(&vpe_ctrl->ops_lock);
+	CDBG("%s: Out\n", __func__);
 
 	return rc;
 }
@@ -1114,14 +1264,67 @@ int msm_vpe_release(void)
 	/* drain the queue, etc. */
 	/* don't change the order of clock and irq.*/
 	int rc = 0;
+	CDBG("%s: state %d\n", __func__, vpe_ctrl->state);
+	if (vpe_ctrl->state != VPE_STATE_IDLE)
+		rc = vpe_disable();
 
-	CDBG("%s: In \n", __func__);
-
-	free_irq(vpe_device->vpeirq, 0);
-	rc = msm_camio_vpe_clk_disable();
 	kfree(vpe_ctrl);
+	return rc;
+}
 
-	CDBG("%s: Out \n", __func__);
+
+int vpe_enable(uint32_t clk_rate)
+{
+	int rc = 0;
+	unsigned long flags = 0;
+	/* don't change the order of clock and irq.*/
+	CDBG("%s: enable_clock rate %u\n", __func__, clk_rate);
+	spin_lock_irqsave(&vpe_ctrl->ops_lock, flags);
+	if (vpe_ctrl->state != VPE_STATE_IDLE) {
+		CDBG("%s: VPE already enabled", __func__);
+		spin_unlock_irqrestore(&vpe_ctrl->ops_lock, flags);
+		return 0;
+	}
+	vpe_ctrl->state = VPE_STATE_INIT;
+	spin_unlock_irqrestore(&vpe_ctrl->ops_lock, flags);
+
+	rc = msm_camio_vpe_clk_enable(clk_rate);
+	if (rc < 0) {
+		pr_err("%s: msm_camio_vpe_clk_enable failed", __func__);
+		vpe_ctrl->state = VPE_STATE_IDLE;
+		return rc;
+	}
+
+	CDBG("%s: enable_irq\n", __func__);
+	vpe_enable_irq();
+
+	/* initialize the data structure - lock, queue etc. */
+	spin_lock_init(&vpe_ctrl->tasklet_lock);
+	INIT_LIST_HEAD(&vpe_ctrl->tasklet_q);
+
+	return rc;
+}
+
+int vpe_disable(void)
+{
+	int rc = 0;
+	unsigned long flags = 0;
+	CDBG("%s: called", __func__);
+	spin_lock_irqsave(&vpe_ctrl->ops_lock, flags);
+	if (vpe_ctrl->state == VPE_STATE_IDLE) {
+		CDBG("%s: VPE already disabled", __func__);
+		spin_unlock_irqrestore(&vpe_ctrl->ops_lock, flags);
+		return 0;
+	}
+	vpe_ctrl->state = VPE_STATE_IDLE;
+	spin_unlock_irqrestore(&vpe_ctrl->ops_lock, flags);
+	vpe_ctrl->out_y_addr = msm_io_r(vpe_device->vpebase +
+		VPE_OUTP0_ADDR_OFFSET);
+	vpe_ctrl->out_cbcr_addr = msm_io_r(vpe_device->vpebase +
+		VPE_OUTP1_ADDR_OFFSET);
+	free_irq(vpe_device->vpeirq, 0);
+	tasklet_kill(&vpe_tasklet);
+	rc = msm_camio_vpe_clk_disable();
 	return rc;
 }
 

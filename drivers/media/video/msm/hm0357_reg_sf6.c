@@ -19,7 +19,7 @@ struct hm0357_i2c_reg_conf const hm0357_init_tbl[] =
 	{0x0023, 0x00FF, BYTE_LEN, 0},// 30 0023 5A 2 1;W 30 0023 7F 2 1	
 	{0x008F, 0x0000, BYTE_LEN, 0},// 30 008F FF,	                                                                                         
 	{0x0004, 0x0011, BYTE_LEN, 0},//
-	//{0x0006, 0x0002, BYTE_LEN, 0},//
+	{0x0006, 0x0002, BYTE_LEN, 0},//
 	{0x000F, 0x0000, BYTE_LEN, 0},//                                                                                                    
 	{0x0012, 0x000C, BYTE_LEN, 0},//                                                                                                    
 	{0x0013, 0x0001, BYTE_LEN, 0},//                                                                                                    

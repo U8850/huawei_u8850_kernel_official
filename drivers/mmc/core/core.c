@@ -280,7 +280,7 @@ int mmc_wait_for_req(struct mmc_host *host, struct mmc_request *mrq)	//sw2-6-1-R
 
 //sw2-6-1-RH-Wlan_Reset7-00*[
 //	wait_for_completion(&complete);
-	return wait_for_completion_timeout(&complete, msecs_to_jiffies(60000));  // FihNkCode@20110601 Babel for SF6.B-1415 *
+	return wait_for_completion_timeout(&complete, msecs_to_jiffies(2500));
 //sw2-6-1-RH-Wlan_Reset7-00*]
 }
 
@@ -502,6 +502,17 @@ static int mmc_host_do_disable(struct mmc_host *host, int lazy)
 int mmc_host_disable(struct mmc_host *host)
 {
 	int err;
+	unsigned long flags;
+
+	spin_lock_irqsave(&host->lock, flags);
+
+	if (host->rescan_disable) {
+		spin_unlock_irqrestore(&host->lock, flags);
+		return 0;
+	}
+
+	spin_unlock_irqrestore(&host->lock, flags);
+
 
 	if (!(host->caps & MMC_CAP_DISABLE))
 		return 0;
@@ -1427,12 +1438,6 @@ int mmc_resume_host(struct mmc_host *host)
 		}
 	}
 	mmc_bus_put(host);
-
-	/*
-	 * We add a slight delay here so that resume can progress
-	 * in parallel.
-	 */
-	mmc_detect_change(host, 1);
 
 	return err;
 }

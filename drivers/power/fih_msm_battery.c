@@ -96,6 +96,11 @@
 #define DBG_LIMIT(x...) do {} while (0)
 #endif
 
+//Slate Code Start
+bool slate_counter_flag = false;
+EXPORT_SYMBOL(slate_counter_flag);
+//Slate Code End
+
 struct rpc_reply_batt_chg_v1 {
 	struct rpc_reply_hdr hdr;
 	u32 	more_data;
@@ -323,8 +328,10 @@ static void msm_batt_update_batt_status(void)
     if (disable_discharging_montior)
         discharging_counter = 31;
 		
-    if (msm_batt_info.current_chg_source & (AC_CHG | USB_CHG)) {
-        if (!msm_batt_info.presence) {
+    if (msm_batt_info.current_chg_source & (AC_CHG | USB_CHG)) 
+    {
+        if (!msm_batt_info.presence) 
+        {
             discharging_counter = 0;
             msm_batt_info.batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;            
         } else if (msm_batt_info.OT_flag) {
@@ -334,35 +341,43 @@ static void msm_batt_update_batt_status(void)
         } else if (msm_batt_info.full || msm_batt_info.batt_level == BATTERY_LEVEL_FULL) {
             discharging_counter = 0;
             msm_batt_info.batt_status = POWER_SUPPLY_STATUS_FULL;
-        } else if (!msm_batt_info.charging && !OT_flag) {
-            if (msm_batt_info.batt_level == BATTERY_LEVEL_FULL) {
+        } 
+	else if (!msm_batt_info.charging && !OT_flag) 
+	{
+            if (msm_batt_info.batt_level == BATTERY_LEVEL_FULL) 
+	    {
                 discharging_counter = 0;
                 msm_batt_info.batt_status = POWER_SUPPLY_STATUS_FULL;
-            } else if (discharging_counter > 5) {
+            } 
+	    else if (discharging_counter > 5 || slate_counter_flag ) {
                 discharging_counter = 0;
                 msm_batt_info.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
-            } else if (msm_batt_info.batt_status != POWER_SUPPLY_STATUS_DISCHARGING) {
+				slate_counter_flag = false;
+            } 
+	    else if (msm_batt_info.batt_status != POWER_SUPPLY_STATUS_DISCHARGING) 
+	    {
                 discharging_counter++;
                 if (msm_batt_info.batt_status != POWER_SUPPLY_STATUS_DISCHARGING)
                     msm_batt_info.batt_status = POWER_SUPPLY_STATUS_CHARGING;
-            } else {
+            } 
+	    else 
+	    {
                 msm_batt_info.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;            
             }
-        } else {
+        }
+	else 
+	{
             OT_flag = false;
             discharging_counter = 0;
             msm_batt_info.batt_status = POWER_SUPPLY_STATUS_CHARGING;
         }
-    } else {
+    }// (msm_batt_info.current_chg_source & (AC_CHG | USB_CHG)) ends
+    else {
         OT_flag = false;
         discharging_counter = 0;
         msm_batt_info.batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
     }
 }
-
-/* SW5, PinyCHWu, 20110715 { */
-extern void bq275x0_battery_clear_partial_flag(void);
-/* }, SW5, PinyCHWu, 20110715 */
 
 void msm_batt_update_charger_type(enum chg_type charger_type)
 {
@@ -403,13 +418,6 @@ void msm_batt_update_charger_type(enum chg_type charger_type)
             msm_batt_info.batt_status = POWER_SUPPLY_STATUS_CHARGING;
     } else
         msm_batt_info.batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
-
-/* SW5, PinyCHWu, 20110715 { */
-//clear partial_flag if charge source changed.
-#ifdef CONFIG_BATTERY_BQ275X0
-	bq275x0_battery_clear_partial_flag();
-#endif
-/* }, SW5, PinyCHWu, 20110715 */
 
     mutex_unlock(&charger_status_lock);
 
@@ -465,16 +473,7 @@ void msm_batt_notify_charging_state(bool charging)
 {
     DBG_LIMIT("BATT: %s\n", charging ? "Charging" : "Discharing");
     mutex_lock(&charger_status_lock);
-//DIV5-VH-CHARGING_ICON-00*[
-    #ifdef CONFIG_FIH_PROJECT_SF4Y6
-    if(msm_batt_info.batt_status == POWER_SUPPLY_STATUS_CHARGING)
-        msm_batt_info.charging = true;
-    else
-        msm_batt_info.charging = charging;
-    #else
-        msm_batt_info.charging = charging;
-    #endif
-//DIV5-VH-CHARGING_ICON-00*]
+    msm_batt_info.charging = charging;
     msm_batt_update_batt_status();
     mutex_unlock(&charger_status_lock);
 }

@@ -339,7 +339,7 @@ struct tcm9001md_i2c_reg_conf const fc_init_tbl[] = {
 { 0x20, 0xC0, FC_BYTE_LEN, 0 },// VCO_DIV[1:0]/*/CLK_SEL[1:0]/AMON0SEL[1:0]/*;
 #endif
 { 0x21, 0x0B, FC_BYTE_LEN, 0 },// */*/*/*/*/*/*/*;
-{ 0x22, 0x07, FC_BYTE_LEN, 0 },// TBINV/RLINV//WIN_MODE//HV_INTERMIT[2:0];//Div2-SW6-MM-MC-mirrorFront-00*
+{ 0x22, 0x47, FC_BYTE_LEN, 0 },// TBINV/RLINV//WIN_MODE//HV_INTERMIT[2:0];//Div2-SW6-MM-MC-EnableHorizontalFlip-00+
 { 0x23, 0x96, FC_BYTE_LEN, 0 },// H_COUNT[7:0];
 { 0x24, 0x00, FC_BYTE_LEN, 0 },// */*/*/*/*/*/*/*;
 { 0x25, 0x42, FC_BYTE_LEN, 0 },// V_COUNT[7:0];

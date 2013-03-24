@@ -376,8 +376,4 @@ unsigned int fih_get_poweroncause_info(void);
 unsigned int fih_ftm_get_hw_id(char* buf);
 /* } FIHTDC, Div2-SW2-BSP CHHsieh, */
 
-//Div2-BSP-AC-CPU_Version-00+{
-unsigned int fih_get_cpu_version_number(void);
-//Div2-BSP-AC-CPU_Version-00+}
-
 #endif

@@ -30,6 +30,7 @@
 #define DBG_IOCTL_CMD_GET_DBGCFG_BIT   _IOWR(DEV_IOCTLID, 2, dbgcfg_ioctl_arg)
 #define DBG_IOCTL_CMD_GET_ERROR_ACTION  _IOR(DEV_IOCTLID, 3, dbgcfg_ioctl_arg)
 #define DBG_IOCTL_CMD_SET_ERROR_ACTION  _IOW(DEV_IOCTLID, 4, dbgcfg_ioctl_arg)
+#define DBG_IOCTL_CMD_SET_DETECT_HW_RESET _IOW(DEV_IOCTLID, 5, dbgcfg_ioctl_arg)	//SW2-5-1-DbgCfgToolPorting-01+
 
 /* Export kernel APIs */
 int DbgCfgGetByBit(unsigned int bid,unsigned int *bvalue);

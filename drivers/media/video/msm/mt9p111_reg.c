@@ -55,7 +55,7 @@ struct mt9p111_i2c_reg_conf const init_tbl[] = {
     {0xC870, 0x0014 , WORD_LEN, 0 },	// CAM_CORE_A_RX_FIFO_TRIGGER_MARK
     {0xC858, 0x0003 , WORD_LEN, 0 },	// CAM_CORE_A_COARSE_ITMIN
     {0xC8B8, 0x0004 , WORD_LEN, 0 },	// CAM_OUTPUT_0_JPEG_CONTROL
-    {0xC8AE, 0x0001 , WORD_LEN, 0 }, 	// CAM_OUTPUT_0_OUTPUT_FORMAT
+    {0xC8AE, 0x0001, WORD_LEN, 0 }, 	// CAM_OUTPUT_0_OUTPUT_FORMAT
     {0xC8AA, 0x0500 , WORD_LEN, 0 },	// CAM_OUTPUT_0_IMAGE_WIDTH//Div6D1-CL-Camera-D1_WVGA-05*
     {0xC8AC, 0x03C0 , WORD_LEN, 0 },	// CAM_OUTPUT_0_IMAGE_HEIGHT//Div6D1-CL-Camera-D1_WVGA-05*
     {0xC872, 0x0010 , WORD_LEN, 0 },	// CAM_CORE_B_Y_ADDR_START
@@ -102,12 +102,12 @@ struct mt9p111_i2c_reg_conf const init_tbl[] = {
     {0xA014, 0x00A8 , WORD_LEN, 0 },	// FD_MIN_EXPECTED60HZ_FLICKER_PERIOD
     {0xA016, 0x00BC , WORD_LEN, 0 },	// FD_MAX_EXPECTED60HZ_FLICKER_PERIOD
     {0xA018, 0x00D6 , WORD_LEN, 0 },	// FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_A
-    {0xA01A, 0x0095 , WORD_LEN, 0 }, 	// FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_B	//0x0075	//SW4-L1-HL-Camera-FixFlickerIssue-00*
+    {0xA01A, 0x0075, WORD_LEN, 0 }, 	// FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_B
     {0xA01C, 0x00B2 , WORD_LEN, 0 },	// FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_A
-    {0xA01E, 0x007C, WORD_LEN, 0 }, 	// FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_B	//0x0062	//SW4-L1-HL-Camera-FixFlickerIssue-00*
+    {0xA01E, 0x0062, WORD_LEN, 0 }, 	// FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_B
     {0xA000, 0x10 , BYTE_LEN, 0 },	// FD_STATUS
     {0x8417, 0x02 , BYTE_LEN, 0 },	// SEQ_STATE_CFG_1_FD
-    {0x8404, 0x06 , BYTE_LEN, 0 },  // SEQ_CMD
+    { 0x8404, 0x06, BYTE_LEN, 0 },  // SEQ_CMD
 };
 
 
@@ -121,15 +121,15 @@ struct mt9p111_i2c_reg_conf const hd_init_tbl[] = {
     {0xC83C, 0x0018 , WORD_LEN, 0 }, // CAM_CORE_A_X_ADDR_START
     {0xC83E, 0x06B7 , WORD_LEN, 0 }, // CAM_CORE_A_Y_ADDR_END
     {0xC840, 0x0A45 , WORD_LEN, 0 }, // CAM_CORE_A_X_ADDR_END
-    {0xC86C, 0x0518 , WORD_LEN, 0 }, // CAM_CORE_A_OUTPUT_SIZE_WIDTH
-    {0xC86E, 0x02D8 , WORD_LEN, 0 }, // CAM_CORE_A_OUTPUT_SIZE_HEIGHT
-    {0xC870, 0x0014 , WORD_LEN, 0 }, // CAM_CORE_A_RX_FIFO_TRIGGER_MARK
-    {0xC858, 0x0003 , WORD_LEN, 0 }, // CAM_CORE_A_COARSE_ITMIN
+    {0xC86C, 0x0518  , WORD_LEN, 0 },// CAM_CORE_A_OUTPUT_SIZE_WIDTH
+    {0xC86E, 0x02D8  , WORD_LEN, 0 },// CAM_CORE_A_OUTPUT_SIZE_HEIGHT
+    {0xC870, 0x0014  , WORD_LEN, 0 },// CAM_CORE_A_RX_FIFO_TRIGGER_MARK
+    {0xC858, 0x0003 , WORD_LEN, 0 },// CAM_CORE_A_COARSE_ITMIN
     {0xC8B8, 0x0004 , WORD_LEN, 0 }, // CAM_OUTPUT_0_JPEG_CONTROL
     {0xC8AA, 0x0500 , WORD_LEN, 0 }, // CAM_OUTPUT_0_IMAGE_WIDTH
     {0xC8AC, 0x02D0 , WORD_LEN, 0 }, // CAM_OUTPUT_0_IMAGE_HEIGHT
     {0xC8AE, 0x0001 , WORD_LEN, 0 }, // CAM_OUTPUT_0_OUTPUT_FORMAT
-    { 0x8404, 0x06, BYTE_LEN, 0 }, // SEQ_CMD
+    { 0x8404, 0x06, BYTE_LEN, 0 },  // SEQ_CMD
 };
 
 struct mt9p111_i2c_reg_conf const hd_to_vga_tbl[] = {
@@ -141,14 +141,14 @@ struct mt9p111_i2c_reg_conf const hd_to_vga_tbl[] = {
     {0xC86A, 0x1194 , WORD_LEN, 0 },    // CAM_CORE_A_LINE_LENGTH_PCK
     {0xC86C, 0x0518 , WORD_LEN, 0 },    // CAM_CORE_A_OUTPUT_SIZE_WIDTH
     {0xC86E, 0x03D4 , WORD_LEN, 0 },    // CAM_CORE_A_OUTPUT_SIZE_HEIGHT
-    {0xC870, 0x0014 , WORD_LEN, 0 },    // CAM_CORE_A_RX_FIFO_TRIGGER_MARK
-    {0xC858, 0x0003 , WORD_LEN, 0 },    // CAM_CORE_A_COARSE_ITMIN
+    {0xC870, 0x0014  , WORD_LEN, 0 },// CAM_CORE_A_RX_FIFO_TRIGGER_MARK
+    {0xC858, 0x0003 , WORD_LEN, 0 }, // CAM_CORE_A_COARSE_ITMIN
     {0xC8A4, 0x0A28 , WORD_LEN, 0 },    // CAM_CORE_B_OUTPUT_SIZE_WIDTH
     {0xC8A6, 0x07A0 , WORD_LEN, 0 },    // CAM_CORE_B_OUTPUT_SIZE_HEIGHT
     {0xC8AA, 0x0280 , WORD_LEN, 0 },    // CAM_OUTPUT_0_IMAGE_WIDTH
     {0xC8AC, 0x01E0 , WORD_LEN, 0 },    // CAM_OUTPUT_0_IMAGE_HEIGHT
     {0xC8AE, 0x0001 , WORD_LEN, 0 },    // CAM_OUTPUT_0_OUTPUT_FORMAT
-    {0x8404, 0x06, BYTE_LEN, 0 },  // SEQ_CMD 
+    { 0x8404, 0x06, BYTE_LEN, 0 },  // SEQ_CMD 
 };
 //Div6D1-HL-Camera-Camcorder_HD-00+}
 //Div6D1-CL-Camera-D1_WVGA-00+{
@@ -282,13 +282,13 @@ static struct mt9p111_i2c_reg_conf const lc_tbl[] = {
     //Div2-SW6-MM-HL-Camera-ForEMITest-00-{
     // form OT
 #if 0
-    { 0xE02A, 0x0001, WORD_LEN, 300 },	// IO_NV_MEM_COMMAND
-    //  POLL	IO_NV_MEM_STATUS::IO_NVMEM_STAT_OTPM_AVAIL =>  0x00
-    { 0xD004, 0x04, BYTE_LEN, 0 },	// PGA_SOLUTION
-    { 0xD006, 0x0002, WORD_LEN, 0 },  // PGA_ZONE_ADDR_0
-    //{ 0xD006, 0x0008, WORD_LEN, 0 },  // PGA_ZONE_ADDR_0
-    { 0xD005, 0x00, BYTE_LEN, 0 },	// PGA_CURRENT_ZONE
-    { 0xD002, 0x8002, WORD_LEN, 0 },  // PGA_ALGO
+    { 0xE02A, 0x0001, WORD_LEN, 300 },	// IO_NV_MEM_COMMAND				
+    //  POLL	IO_NV_MEM_STATUS::IO_NVMEM_STAT_OTPM_AVAIL =>  0x00 										
+    { 0xD004, 0x04, BYTE_LEN, 0 },	// PGA_SOLUTION 					  
+    { 0xD006, 0x0002, WORD_LEN, 0 },  // PGA_ZONE_ADDR_0				  
+    //	{ 0xD006, 0x0008, WORD_LEN, 0 },  // PGA_ZONE_ADDR_0		 
+    { 0xD005, 0x00, BYTE_LEN, 0 },	// PGA_CURRENT_ZONE 				  
+    { 0xD002, 0x8002, WORD_LEN, 0 },  // PGA_ALGO						  
     { 0x3210, 0x49B8, WORD_LEN, 0 },  // COLOR_PIPELINE_CONTROL
 #endif
     //Div2-SW6-MM-HL-Camera-ForEMITest-00-}	
@@ -330,19 +330,19 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
     {0xAC4C, 0xFF7E , WORD_LEN, 0 },	// AWB_LEFT_CCM_3
     {0xAC4E, 0x01BD , WORD_LEN, 0 },	// AWB_LEFT_CCM_4
     {0xAC50, 0xFFC5 , WORD_LEN, 0 },	// AWB_LEFT_CCM_5
-    {0xAC52, 0xFFBB , WORD_LEN, 0 },	// AWB_LEFT_CCM_6
-    {0xAC54, 0xFF3E , WORD_LEN, 0 },	// AWB_LEFT_CCM_7
-    {0xAC56, 0x0204 , WORD_LEN, 0 },	// AWB_LEFT_CCM_8
+    {0xAC52, 0xFFE1 , WORD_LEN, 0 },	// AWB_LEFT_CCM_6
+    {0xAC54, 0xFF34 , WORD_LEN, 0 },	// AWB_LEFT_CCM_7
+    {0xAC56, 0x01EB , WORD_LEN, 0 },	// AWB_LEFT_CCM_8
     {0xAC58, 0x00A8 , WORD_LEN, 0 },	// AWB_LEFT_CCM_R2BRATIO
     {0xAC5C, 0x0233 , WORD_LEN, 0 },	// AWB_RIGHT_CCM_0
     {0xAC5E, 0xFF23 , WORD_LEN, 0 },	// AWB_RIGHT_CCM_1
     {0xAC60, 0xFFAA , WORD_LEN, 0 },	// AWB_RIGHT_CCM_2
     {0xAC62, 0xFF91 , WORD_LEN, 0 },	// AWB_RIGHT_CCM_3
-    {0xAC64, 0x01B0 , WORD_LEN, 0 },	// AWB_RIGHT_CCM_4
+    {0xAC64, 0x01AF , WORD_LEN, 0 },	// AWB_RIGHT_CCM_4
     {0xAC66, 0xFFBF , WORD_LEN, 0 },	// AWB_RIGHT_CCM_5
     {0xAC68, 0xFFE7 , WORD_LEN, 0 },	// AWB_RIGHT_CCM_6
     {0xAC6A, 0xFF4C , WORD_LEN, 0 },	// AWB_RIGHT_CCM_7
-    {0xAC6C, 0x01CD , WORD_LEN, 0 },	// AWB_RIGHT_CCM_8
+    {0xAC6C, 0x01CE , WORD_LEN, 0 },	// AWB_RIGHT_CCM_8
     {0xAC6E, 0x005A , WORD_LEN, 0 },	// AWB_RIGHT_CCM_R2BRATIO
     {0xAC72, 0x004D , WORD_LEN, 0 },	// AWB_LL_CCM_0
     {0xAC74, 0x0096 , WORD_LEN, 0 },	// AWB_LL_CCM_1
@@ -391,10 +391,10 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
     {0xDC37, 0x62 , BYTE_LEN, 0 },	// SYS_BRIGHT_COLORKILL
     {0x35A4, 0x0596 , WORD_LEN, 0 },	// BRIGHT_COLOR_KILL_CONTROLS
     {0x35A2, 0x009C , WORD_LEN, 0 },	// DARK_COLOR_KILL_CONTROLS
-    {0x098E, 0x5C02 , WORD_LEN, 0 },	// MCU_ADDR
+    {0x098E, 0x5C02 , WORD_LEN, 0 },		// MCU_ADDR
     {0xDC02, 0x003E , WORD_LEN, 0 },	// SYS_ALGO
     {0xDC36, 0x34 , BYTE_LEN, 0 },	// SYS_DARK_COLOR_KILL
-    // Refresh Mode - skip
+    	// Refresh Mode - skip
     {0xBC18, 0x00 , BYTE_LEN, 0 },	// LL_GAMMA_CONTRAST_CURVE_0
     {0xBC19, 0x11 , BYTE_LEN, 0 },	// LL_GAMMA_CONTRAST_CURVE_1
     {0xBC1A, 0x23 , BYTE_LEN, 0 },	// LL_GAMMA_CONTRAST_CURVE_2
@@ -415,23 +415,23 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
     {0xBC29, 0xFB , BYTE_LEN, 0 },	// LL_GAMMA_CONTRAST_CURVE_17
     {0xBC2A, 0xFF , BYTE_LEN, 0 },	// LL_GAMMA_CONTRAST_CURVE_18
     {0xBC2B, 0x00 , BYTE_LEN, 0 }, 	// LL_GAMMA_NEUTRAL_CURVE_0
-    {0xBC2C, 0x0C , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_1
-    {0xBC2D, 0x1F , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_2
-    {0xBC2E, 0x36 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_3
-    {0xBC2F, 0x56 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_4
-    {0xBC30, 0x70 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_5
-    {0xBC31, 0x88 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_6
-    {0xBC32, 0x9B , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_7
-    {0xBC33, 0xAB , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_8
-    {0xBC34, 0xB9 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_9
-    {0xBC35, 0xC4 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_10
-    {0xBC36, 0xCE , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_11
-    {0xBC37, 0xD7 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_12
-    {0xBC38, 0xE0 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_13
-    {0xBC39, 0xE7 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_14
-    {0xBC3A, 0xEE , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_15
-    {0xBC3B, 0xF4 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_16
-    {0xBC3C, 0xFA , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_17
+    {0xBC2C, 0x0D , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_1
+    {0xBC2D, 0x21 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_2
+    {0xBC2E, 0x38 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_3
+    {0xBC2F, 0x58 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_4
+    {0xBC30, 0x71 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_5
+    {0xBC31, 0x87 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_6
+    {0xBC32, 0x9A , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_7
+    {0xBC33, 0xA9 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_8
+    {0xBC34, 0xB6 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_9
+    {0xBC35, 0xC2 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_10
+    {0xBC36, 0xCC , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_11
+    {0xBC37, 0xD5 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_12
+    {0xBC38, 0xDE , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_13
+    {0xBC39, 0xE5 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_14
+    {0xBC3A, 0xEC , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_15
+    {0xBC3B, 0xF3 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_16
+    {0xBC3C, 0xF9 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_17
     {0xBC3D, 0xFF , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_18
     {0xBC3E, 0x00 , BYTE_LEN, 0 },	// LL_GAMMA_NR_CURVE_0
     {0xBC3F, 0x18 , BYTE_LEN, 0 },	// LL_GAMMA_NR_CURVE_1
@@ -509,12 +509,12 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 
     //demosaic
     {0x33B0, 0x2A16 , WORD_LEN, 0 },	// FFNR_ALPHA_BETA
-    {0xBC8A, 0x04 , BYTE_LEN, 0 },	// LL_START_FF_MIX_THRESH_Y
-    {0xBC8B, 0x38 , BYTE_LEN, 0 },	// LL_END_FF_MIX_THRESH_Y
-    {0xBC8C, 0x18 , BYTE_LEN, 0 },	// LL_START_FF_MIX_THRESH_YGAIN
-    {0xBC8D, 0x4F , BYTE_LEN, 0 },	// LL_END_FF_MIX_THRESH_YGAIN
-    {0xBC8E, 0x7C , BYTE_LEN, 0 },	// LL_START_FF_MIX_THRESH_GAIN
-    {0xBC8F, 0x06 , BYTE_LEN, 0 },	// LL_END_FF_MIX_THRESH_GAIN
+    {0xBC8A, 0x0E , BYTE_LEN, 0 },	// LL_START_FF_MIX_THRESH_Y
+    {0xBC8B, 0x4C , BYTE_LEN, 0 },	// LL_END_FF_MIX_THRESH_Y
+    {0xBC8C, 0x00 , BYTE_LEN, 0 },	// LL_START_FF_MIX_THRESH_YGAIN
+    {0xBC8D, 0x24 , BYTE_LEN, 0 },	// LL_END_FF_MIX_THRESH_YGAIN
+    {0xBC8E, 0xFF , BYTE_LEN, 0 },	// LL_START_FF_MIX_THRESH_GAIN
+    {0xBC8F, 0x00 , BYTE_LEN, 0 },	// LL_END_FF_MIX_THRESH_GAIN
     {0xBCB2, 0x20 , BYTE_LEN, 0 },	// LL_CDC_DARK_CLUS_SLOPE
     {0xBCB3, 0x3A , BYTE_LEN, 0 },	// LL_CDC_DARK_CLUS_SATUR
     {0xBCB4, 0x39 , BYTE_LEN, 0 },	// RESERVED_LL_B4
@@ -527,7 +527,7 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
     //SFFB_rev3_noisemodel
     {0xBCC0, 0x1F , BYTE_LEN, 0 },	// LL_SFFB_RAMP_START
     {0xBCC1, 0x03 , BYTE_LEN, 0 },	// LL_SFFB_RAMP_STOP
-    {0xBCC2, 0x1E , BYTE_LEN, 0 },	// LL_SFFB_SLOPE_START
+    {0xBCC2, 0x3C , BYTE_LEN, 0 },	// LL_SFFB_SLOPE_START
     {0xBCC3, 0x10 , BYTE_LEN, 0 },	// LL_SFFB_SLOPE_STOP
     {0xBCC4, 0x07 , BYTE_LEN, 0 },	// LL_SFFB_THSTART
     {0xBCC5, 0x0B , BYTE_LEN, 0 },	// LL_SFFB_THSTOP
@@ -561,7 +561,7 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 
     //min_fps
     {0xA818, 0x07D0 , WORD_LEN, 0 },	// AE_TRACK_TARGET_INT_TIME_ROWS
-    {0xA81A, 0x0B38 , WORD_LEN, 0 },  // AE_TRACK_MAX_INT_TIME_ROWS 7.5Fps 0x0FF4(5Fps)
+    {0xA81A, 0x0A00 , WORD_LEN, 0 },  //0x0FF4(5Fps) 	// AE_TRACK_MAX_INT_TIME_ROWS
 
     //ccm_saturation
     {0xBC56, 0x80 , BYTE_LEN, 0 },		//0xA8 	// LL_START_CCM_SATURATION
@@ -1402,7 +1402,7 @@ static struct mt9p111_i2c_reg_conf const char_tbl[] = {
 	{ 0x3EE6, 0xA5C0, WORD_LEN, 0 },  // DAC_LD_26_27
 	{ 0x316C, 0xF43F, WORD_LEN, 0 },  // DAC_TXLO
 	{ 0x316E, 0xC6FF, WORD_LEN, 0 },  // DAC_ECL
-};
+};    
 
 #ifndef CONFIG_FIH_PROJECT_SF4V5
 static const struct mt9p111_i2c_reg_conf const AF_setting[] = {
@@ -1414,32 +1414,34 @@ static const struct mt9p111_i2c_reg_conf const AF_setting[] = {
 	{ 0x8419, 0x05, BYTE_LEN, 0 },	// SEQ_STATE_CFG_1_AF     // 0x03 is continuous mode
 	{ 0xC400, 0x08, BYTE_LEN, 0 },	// AFM_ALGO
 	//AF_settings
-	{ 0xB002, 0x0365, WORD_LEN, 0 },  // AF_MODE
+	{ 0xB002, 0x0305, WORD_LEN, 0 },  // AF_MODE
 	{ 0xB004, 0x0002, WORD_LEN, 0 },  // AF_ALGO
-  { 0xB045, 0x0015, WORD_LEN, 0 },  // AF_MODE_EX
-	{ 0xB008, 0x0000, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_HI
-	{ 0xB00A, 0x002A, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_HI//Div6D1-CL-Camera-autofocus-00*
-	{ 0xB00C, 0x0B82, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_LO
-	{ 0xB00E, 0xA000, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_LO//Div6D1-CL-Camera-autofocus-00*
+    { 0xB045, 0x0015, WORD_LEN, 0 },  // AF_MODE_EX    
+	{ 0xB008, 0x0003, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_HI
+	{ 0xB00A, 0xFFFF, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_HI//Div6D1-CL-Camera-autofocus-00*
+	{ 0xB00C, 0xFFFF, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_LO
+	{ 0xB00E, 0xFFFF, WORD_LEN, 0 },  // AF_ZONE_WEIGHTS_LO//Div6D1-CL-Camera-autofocus-00*
 	//set_posMin/Max
-	{ 0x098E, 0xC40C, WORD_LEN, 0 },  // LOGICAL_ADDRESS_ACCESS
-	{ 0xC40C, 0x00E8, WORD_LEN, 0 },  // AFM_POS_MAX
-	{ 0xC40A, 0x0010, WORD_LEN, 0 },  // AFM_POS_MIN
-	{ 0xC407, 0x10, BYTE_LEN, 0 },  // AFM_DEFAULT_POS
-	{ 0xC408, 0xA0, BYTE_LEN, 0 },  // AFM_MACRO_POS	
+	{ 0xC40A, 0x0028, WORD_LEN, 0 },  // AFM_POS_MIN
+	{ 0xC40C, 0x00BE, WORD_LEN, 0 },  // AFM_POS_MAX
 	//AF_postition_settings
 	{ 0xB018, 0x00, BYTE_LEN, 0 },  // AF_FS_POS_0
-	{ 0xB019, 0x18, BYTE_LEN, 0 },  // AF_FS_POS_1
-	{ 0xB01A, 0x30, BYTE_LEN, 0 },  // AF_FS_POS_2
-	{ 0xB01B, 0x48, BYTE_LEN, 0 },  // AF_FS_POS_3
-	{ 0xB01C, 0x60, BYTE_LEN, 0 },  // AF_FS_POS_4
+	{ 0xB019, 0x20, BYTE_LEN, 0 },  // AF_FS_POS_1
+	{ 0xB01A, 0x40, BYTE_LEN, 0 },  // AF_FS_POS_2
+	{ 0xB01B, 0x60, BYTE_LEN, 0 },  // AF_FS_POS_3
+	{ 0xB01C, 0x80, BYTE_LEN, 0 },  // AF_FS_POS_4
+	{ 0xB01D, 0xA0, BYTE_LEN, 0 },  // AF_FS_POS_5
+	{ 0xB01E, 0xC0, BYTE_LEN, 0 },  // AF_FS_POS_6
+	{ 0xB01A, 0x38, BYTE_LEN, 0 },  // AF_FS_POS_2
+	{ 0xB01B, 0x50, BYTE_LEN, 0 },  // AF_FS_POS_3
+	{ 0xB01C, 0x68, BYTE_LEN, 0 },  // AF_FS_POS_4
 	{ 0xB01D, 0x80, BYTE_LEN, 0 },  // AF_FS_POS_5
-	{ 0xB01E, 0xA0, BYTE_LEN, 0 },  // AF_FS_POS_6
-	{ 0xB01F, 0xC0, BYTE_LEN, 0 },  // AF_FS_POS_7
-	{ 0xB020, 0xE0, BYTE_LEN, 0 },  // AF_FS_POS_8
+	{ 0xB01E, 0x98, BYTE_LEN, 0 },  // AF_FS_POS_6
+	{ 0xB01F, 0xB0, BYTE_LEN, 0 },  // AF_FS_POS_7
+	{ 0xB020, 0xC0, BYTE_LEN, 0 },  // AF_FS_POS_8
 	{ 0xB012, 0x09, BYTE_LEN, 0 },  // AF_FS_NUM_STEPS
 	//2nd_scan_option
-	{ 0xB013, 0x44, BYTE_LEN, 0 },  // AF_FS_NUM_STEPS2
+	{ 0xB013, 0x33, BYTE_LEN, 0 },  // AF_FS_NUM_STEPS2
 	{ 0xB014, 0x06, BYTE_LEN, 0 },  // AF_FS_STEP_SIZE
 	{ 0x8404, 0x05, BYTE_LEN, 0 },  // SEQ_CMD
 	{ 0x0018, 0x2008, WORD_LEN, 0 },  // STANDBY_CONTROL_AND_STATUS
@@ -1463,8 +1465,7 @@ static const struct mt9p111_i2c_reg_conf const AF_setting[] = {
 	{ 0xB00E, 0xFFFF, WORD_LEN, 0 },	
 	//set_posMin/Max
 	{ 0xC40A, 0x0028, WORD_LEN, 0 },	// AFM_POS_MIN
-	{ 0xC40C, 0x00DC, WORD_LEN, 0 },	// AFM_POS_MAX
-	{ 0xC408, 0x00BC, WORD_LEN, 0 },	// AFM_MACRO_POS
+	{ 0xC40C, 0x00BE, WORD_LEN, 0 },	// AFM_POS_MAX
 	//AF_postition_settings
 	{ 0xB018, 0x00, BYTE_LEN, 0 }, 	// AF_FS_POS_0
 	{ 0xB019, 0x14, BYTE_LEN, 0 }, 	// AF_FS_POS_1
@@ -1492,46 +1493,6 @@ static const struct mt9p111_i2c_reg_conf const AF_setting[] = {
 };
 #endif
 
-static const struct mt9p111_i2c_reg_conf const AF_MARCO_setting[] = {
-    //AF_VCM_enable
-    {0x098E, 0xC400, WORD_LEN, 0},         // LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
-    {0xC400, 0x88, BYTE_LEN, 0},       // AFM_ALGO
-    {0x8419, 0x05, BYTE_LEN, 0},        // SEQ_STATE_CFG_1_AF
-    {0xC400, 0x08, BYTE_LEN, 0},       // AFM_ALGO
-    //AF_settings
-    {0xB002, 0x0305, WORD_LEN, 0},         // AF_MODE
-    {0xB004, 0x0002, WORD_LEN, 0},         // AF_ALGO
-    {0xB008, 0x0003, WORD_LEN, 0},
-    {0xB00A, 0xFFFF, WORD_LEN, 0},
-    {0xB00C, 0xFFFF, WORD_LEN, 0},
-    {0xB00E, 0xFFFF, WORD_LEN, 0},      
-    //set_posMin/Max
-    {0xC40A, 0x0068, WORD_LEN, 0},         // AFM_POS_MIN
-    {0xC40C, 0x00FF, WORD_LEN, 0},         // AFM_POS_MAX
-    //AF_postition_settings
-    {0xB018, 0x78, BYTE_LEN, 0},       // AF_FS_POS_0
-    {0xB019, 0x81, BYTE_LEN, 0},       // AF_FS_POS_1
-    {0xB01A, 0x8A, BYTE_LEN, 0},      // AF_FS_POS_2
-    {0xB01B, 0x93, BYTE_LEN, 0},       // AF_FS_POS_3
-    {0xB01C, 0x9C, BYTE_LEN, 0},      // AF_FS_POS_4
-    {0xB01D, 0xA5, BYTE_LEN, 0},      // AF_FS_POS_5
-    {0xB01E, 0xAE, BYTE_LEN, 0},      // AF_FS_POS_6
-    {0xB01F, 0xB7, BYTE_LEN, 0},       // AF_FS_POS_7
-    {0xB020, 0xC0, BYTE_LEN, 0},       // AF_FS_POS_8
-    {0xB021, 0xC9, BYTE_LEN, 0},       // AF_FS_POS_9
-    {0xB022, 0xD2, BYTE_LEN, 0},      // AF_FS_POS_10
-    {0xB023, 0xDB, BYTE_LEN, 0},      // AF_FS_POS_11
-    {0xB024, 0xE4, BYTE_LEN, 0},       // AF_FS_POS_12
-    {0xB025, 0xED, BYTE_LEN, 0},      // AF_FS_POS_13
-    {0xB026, 0xF6, BYTE_LEN, 0},       // AF_FS_POS_14
-    {0xB027, 0xFD, BYTE_LEN, 0},      // AF_FS_POS_15 
-    {0xB012, 0x0F, BYTE_LEN, 0},       // AF_FS_NUM_STEPS
-    {0xB014, 0x09, BYTE_LEN, 0},       // AF_FS_STEP_SIZE
-    {0x8404, 0x05, BYTE_LEN, 0},        // SEQ_CMD
-    {0x3EDA, 0x6060, WORD_LEN, 0},       // DAC_LD_14_15
-    {0x0018, 0x2008, WORD_LEN, 100},   // STANDBY_CONTROL_AND_STATUS
-};
-
 //Div6D1-HL-Camera-IQ-00+{
 static const struct mt9p111_i2c_reg_conf const aftrigger_tbl[] = {
 	{ 0x098E, 0xB006, WORD_LEN, 0 }, 	// LOGICAL_ADDRESS_ACCESS [AF_PROGRESS]
@@ -1539,13 +1500,13 @@ static const struct mt9p111_i2c_reg_conf const aftrigger_tbl[] = {
 };
 
 static const struct mt9p111_i2c_reg_conf const context_a_to_b_tbl[] = {
-	{ 0x098E, 0x843C, WORD_LEN, 0 }, 	// LOGICAL_ADDRESS_ACCESS [SEQ_STATE_CFG_5_MAX_FRAME_CNT]
+	{ 0x098E, 0x843C, WORD_LEN, 0 }, 	// LOGICAL_ADDRESS_ACCESS [SEQ_STATE_CFG_5_MAX_FRAME_CNT]	
 	{ 0x843C, 0xFF, BYTE_LEN, 0 }, 	// SEQ_STATE_CFG_5_MAX_FRAME_CNT
 	{ 0x8404, 0x02, BYTE_LEN, 0 },	// SEQ_CMD
 };
 
 static const struct mt9p111_i2c_reg_conf const context_b_to_a_tbl[] = {
-	{ 0x098E, 0x843C, WORD_LEN, 0 }, 	// LOGICAL_ADDRESS_ACCESS [SEQ_STATE_CFG_5_MAX_FRAME_CNT]
+	{ 0x098E, 0x843C, WORD_LEN, 0 }, 	// LOGICAL_ADDRESS_ACCESS [SEQ_STATE_CFG_5_MAX_FRAME_CNT]	
 	{ 0x843C, 0x01, BYTE_LEN, 0 }, 	// SEQ_STATE_CFG_5_MAX_FRAME_CNT
 	{ 0x8404, 0x01, BYTE_LEN, 0 },	// SEQ_CMD
 	{ 0x0016, 0x0047, WORD_LEN, 0 },	// CLOCKS_CONTRO
@@ -1577,7 +1538,7 @@ static const struct mt9p111_i2c_reg_conf const AB_50MHZ_setting[] = {
 static const struct mt9p111_i2c_reg_conf const AB_AUTO_setting[] = {
 	{ 0x098E, 0x8417, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS [SEQ_STATE_CFG_1_FD]
 	{ 0x8417, 0x02, BYTE_LEN, 0 }, // SEQ_STATE_CFG_1_FD
-	{ 0xA004, 0x3C, BYTE_LEN, 0 }, // FD_EXPECTED_FLICKER_SOURCE_FREQUENCY//Div6D1-CL-Camera-antibanding-00*
+	{ 0xA004, 0x32, BYTE_LEN, 0 }, // FD_EXPECTED_FLICKER_SOURCE_FREQUENCY//Div6D1-CL-Camera-antibanding-00*
 	{ 0xA002, 0x0001, WORD_LEN, 0 }, // FD_ALGO
 	{ 0x8404, 0x06, BYTE_LEN, 0 }, // SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*
 };
@@ -1680,23 +1641,23 @@ static const struct mt9p111_i2c_reg_conf const CONST_M1_setting[] = {
 static const struct mt9p111_i2c_reg_conf const CONST_ZERO_setting[] = {
 	{ 0x098E, 0xBC2B, WORD_LEN, 0 },  //LOGICAL_ADDRESS_ACCESS [LL_GAMMA_NEUTRAL_CURVE_0]
     {0xBC2B, 0x00 , BYTE_LEN, 0 }, 	// LL_GAMMA_NEUTRAL_CURVE_0
-    {0xBC2C, 0x0C , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_1
-    {0xBC2D, 0x1F , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_2
-    {0xBC2E, 0x36 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_3
-    {0xBC2F, 0x56 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_4
-    {0xBC30, 0x70 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_5
-    {0xBC31, 0x88 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_6
-    {0xBC32, 0x9B , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_7
-    {0xBC33, 0xAB , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_8
-    {0xBC34, 0xB9 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_9
-    {0xBC35, 0xC4 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_10
-    {0xBC36, 0xCE , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_11
-    {0xBC37, 0xD7 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_12
-    {0xBC38, 0xE0 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_13
-    {0xBC39, 0xE7 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_14
-    {0xBC3A, 0xEE , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_15
-    {0xBC3B, 0xF4 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_16
-    {0xBC3C, 0xFA , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_17
+    {0xBC2C, 0x0D , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_1
+    {0xBC2D, 0x21 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_2
+    {0xBC2E, 0x38 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_3
+    {0xBC2F, 0x58 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_4
+    {0xBC30, 0x71 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_5
+    {0xBC31, 0x87 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_6
+    {0xBC32, 0x9A , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_7
+    {0xBC33, 0xA9 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_8
+    {0xBC34, 0xB6 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_9
+    {0xBC35, 0xC2 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_10
+    {0xBC36, 0xCC , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_11
+    {0xBC37, 0xD5 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_12
+    {0xBC38, 0xDE , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_13
+    {0xBC39, 0xE5 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_14
+    {0xBC3A, 0xEC , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_15
+    {0xBC3B, 0xF3 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_16
+    {0xBC3C, 0xF9 , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_17
     {0xBC3D, 0xFF , BYTE_LEN, 0 },	// LL_GAMMA_NEUTRAL_CURVE_18
 	{ 0x8404, 0x05, BYTE_LEN, 0 },  //SEQ_CMD
 };
@@ -1895,8 +1856,8 @@ static const struct mt9p111_i2c_reg_conf const WB_AUTO_setting[] = {
 	{ 0xACB3, 0x4D, BYTE_LEN, 0 }, // AWB_RG_MAX_BRIGHT
 	{ 0xACB6, 0x36, BYTE_LEN, 0 }, // AWB_BG_MIN_BRIGHT
 	{ 0xACB7, 0x4A, BYTE_LEN, 0 }, // AWB_BG_MAX_BRIGHT
-	{ 0xAC44, 0x00, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT
-	{ 0xAC45, 0x7F, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT
+	{ 0xAC44, 0x00, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT								   
+	{ 0xAC45, 0x7F, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT  
 };
 
 static const struct mt9p111_i2c_reg_conf const WB_DAYLIGHT_setting[] = {
@@ -1909,8 +1870,8 @@ static const struct mt9p111_i2c_reg_conf const WB_DAYLIGHT_setting[] = {
 	{ 0xACB3, 0x44, BYTE_LEN, 0 }, // AWB_RG_MAX_BRIGHT
 	{ 0xACB6, 0x40, BYTE_LEN, 0 }, // AWB_BG_MIN_BRIGHT
 	{ 0xACB7, 0x4A, BYTE_LEN, 0 }, // AWB_BG_MAX_BRIGHT
-	{ 0xAC44, 0x7C, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT
-	{ 0xAC45, 0x7F, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT
+	{ 0xAC44, 0x7C, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT								   
+	{ 0xAC45, 0x7F, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT 							   
 	{ 0xAC04, 0x40, BYTE_LEN, 0 }, // AWB_PRE_AWB_R2G_RATIO
 	{ 0xAC05, 0x48, BYTE_LEN, 0 }, // AWB_PRE_AWB_B2G_RATIO
 	{ 0xAC08, 0x7F, BYTE_LEN, 0 }, // AWB_CUR_CCM_POS
@@ -1926,8 +1887,8 @@ static const struct mt9p111_i2c_reg_conf const WB_CLOUDY_DAYLIGHT_setting[] = {
 	{ 0xACB3, 0x42, BYTE_LEN, 0 }, // AWB_RG_MAX_BRIGHT
 	{ 0xACB6, 0x44, BYTE_LEN, 0 }, // AWB_BG_MIN_BRIGHT
 	{ 0xACB7, 0x4C, BYTE_LEN, 0 }, // AWB_BG_MAX_BRIGHT
-	{ 0xAC44, 0x7C, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT
-	{ 0xAC45, 0x7F, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT
+	{ 0xAC44, 0x7C, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT								   
+	{ 0xAC45, 0x7F, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT 							   
 	{ 0xAC04, 0x3E, BYTE_LEN, 0 }, // AWB_PRE_AWB_R2G_RATIO
 	{ 0xAC05, 0x48, BYTE_LEN, 0 }, // AWB_PRE_AWB_B2G_RATIO
 	{ 0xAC08, 0x7F, BYTE_LEN, 0 }, // AWB_CUR_CCM_POS
@@ -1943,8 +1904,8 @@ static const struct mt9p111_i2c_reg_conf const WB_INCANDESCENT_setting[] = {
 	{ 0xACB3, 0x5F, BYTE_LEN, 0 }, // AWB_RG_MAX_BRIGHT
 	{ 0xACB6, 0x26, BYTE_LEN, 0 }, // AWB_BG_MIN_BRIGHT
 	{ 0xACB7, 0x2E, BYTE_LEN, 0 }, // AWB_BG_MAX_BRIGHT
-	{ 0xAC44, 0x00, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT
-	{ 0xAC45, 0x08, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT
+	{ 0xAC44, 0x00, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT								   
+	{ 0xAC45, 0x08, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT 							   
 	{ 0xAC04, 0x5B, BYTE_LEN, 0 }, // AWB_PRE_AWB_R2G_RATIO
 	{ 0xAC05, 0x2A, BYTE_LEN, 0 }, // AWB_PRE_AWB_B2G_RATIO
 	{ 0xAC08, 0x00, BYTE_LEN, 0 }, // AWB_CUR_CCM_POS
@@ -1960,8 +1921,8 @@ static const struct mt9p111_i2c_reg_conf const WB_FLUORESCENT_setting[] = {
 	{ 0xACB3, 0x4B, BYTE_LEN, 0 }, // AWB_RG_MAX_BRIGHT
 	{ 0xACB6, 0x2C, BYTE_LEN, 0 }, // AWB_BG_MIN_BRIGHT
 	{ 0xACB7, 0x34, BYTE_LEN, 0 }, // AWB_BG_MAX_BRIGHT
-	{ 0xAC44, 0x40, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT
-	{ 0xAC45, 0x4A, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT
+	{ 0xAC44, 0x40, BYTE_LEN, 0 }, // AWB_LEFT_CCM_POS_RANGE_LIMIT								   
+	{ 0xAC45, 0x4A, BYTE_LEN, 0 }, // AWB_RIGHT_CCM_POS_RANGE_LIMIT 							   
 	{ 0xAC04, 0x47, BYTE_LEN, 0 }, // AWB_PRE_AWB_R2G_RATIO
 	{ 0xAC05, 0x30, BYTE_LEN, 0 }, // AWB_PRE_AWB_B2G_RATIO
 	{ 0xAC08, 0x45, BYTE_LEN, 0 }, // AWB_CUR_CCM_POS
@@ -2036,7 +1997,7 @@ static const struct mt9p111_i2c_reg_conf const ISO_800_setting[] = {
 
 struct mt9p111_reg mt9p111_regs = {
 	//Div6D1-HL-Camera-IQ-00-{
-	//Div6D1-HL-Camera-IQ-00-}
+	//Div6D1-HL-Camera-IQ-00-}	
 	//Div6D1-HL-Camera-IQ-00+{
 	.inittbl = init_tbl,
 	.inittbl_size = ARRAY_SIZE(init_tbl),
@@ -2051,15 +2012,13 @@ struct mt9p111_reg mt9p111_regs = {
 	.context_a_to_b_tbl = context_a_to_b_tbl,
 	.context_a_to_b_tbl_size = ARRAY_SIZE(context_a_to_b_tbl),
 	.context_b_to_a_tbl = context_b_to_a_tbl,
-	.context_b_to_a_tbl_size = ARRAY_SIZE(context_b_to_a_tbl),
-	//Div6D1-HL-Camera-IQ-00+}
+	.context_b_to_a_tbl_size = ARRAY_SIZE(context_b_to_a_tbl),	
+	//Div6D1-HL-Camera-IQ-00+}	
 	//FIHLX-D6P2-MM-KK-Aptina5M-0++
 	.aftbl = AF_setting,
 	.aftbl_size = ARRAY_SIZE(AF_setting),
 	//FIHLX-D6P2-MM-KK-Aptina5M-0--
-	//Div6D1-HL-Camera-AntiBanding-00+{
-	.marcoaftbl=AF_MARCO_setting,
-	.marcoaftbl_size=ARRAY_SIZE(AF_MARCO_setting),
+	//Div6D1-HL-Camera-AntiBanding-00+{	
 	.ab_off_tbl = AB_OFF_setting,
 	.ab_off_tbl_size = ARRAY_SIZE(AB_OFF_setting),
 	.ab_60mhz_tbl = AB_60MHZ_setting,
@@ -2067,7 +2026,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.ab_50mhz_tbl = AB_50MHZ_setting,
 	.ab_50mhz_tbl_size = ARRAY_SIZE(AB_50MHZ_setting),
 	.ab_auto_tbl = AB_AUTO_setting,
-	.ab_auto_tbl_size = ARRAY_SIZE(AB_AUTO_setting),
+	.ab_auto_tbl_size = ARRAY_SIZE(AB_AUTO_setting),	
 	//Div6D1-HL-Camera-AntiBanding-00+}
 	//Div6D1-HL-Camera-Brightness-00+{
 	.br0_tbl = BR0_setting,
@@ -2083,7 +2042,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.br5_tbl = BR5_setting,
 	.br5_tbl_size = ARRAY_SIZE(BR5_setting),
 	.br6_tbl = BR6_setting,
-	.br6_tbl_size = ARRAY_SIZE(BR6_setting),
+	.br6_tbl_size = ARRAY_SIZE(BR6_setting),	
 	//Div6D1-HL-Camera-Brightness-00+}
 	//Div6D1-HL-Camera-Contrast-00+{
 	.const_m2_tbl = CONST_M2_setting,
@@ -2096,7 +2055,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.const_p1_tbl_size = ARRAY_SIZE(CONST_P1_setting),
 	.const_p2_tbl = CONST_P2_setting,
 	.const_p2_tbl_size = ARRAY_SIZE(CONST_P2_setting),
-	//Div6D1-HL-Camera-Contrast-00+}
+	//Div6D1-HL-Camera-Contrast-00+}		
 	//Div6D1-HL-Camera-Effect-00+{
 	.effect_none_tbl = EF_NONE_setting,
 	.effect_none_tbl_size = ARRAY_SIZE(EF_NONE_setting),
@@ -2107,7 +2066,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.effect_negative_tbl = EF_NEGATIVE_setting,
 	.effect_negative_tbl_size = ARRAY_SIZE(EF_NEGATIVE_setting),
 	.effect_solarize_tbl = EF_SOLARIZE_setting,
-	.effect_solarize_tbl_size = ARRAY_SIZE(EF_SOLARIZE_setting),
+	.effect_solarize_tbl_size = ARRAY_SIZE(EF_SOLARIZE_setting),	
 	//Div6D1-HL-Camera-Effect-00+}
 	//Div6D1-HL-Camera-EXP-00+{
 	.exp_normal_tbl = EXP_NORMAL_setting,
@@ -2115,7 +2074,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.exp_spot_tbl = EXP_SPOT_setting,
 	.exp_spot_tbl_size = ARRAY_SIZE(EXP_SPOT_setting),
 	.exp_average_tbl = EXP_AVERAGE_setting,
-	.exp_average_tbl_size = ARRAY_SIZE(EXP_AVERAGE_setting),
+	.exp_average_tbl_size = ARRAY_SIZE(EXP_AVERAGE_setting),	
 	//Div6D1-HL-Camera-EXP-00+}	
 	//Div6D1-HL-Camera-Saturation-00+{
 	.satu_m2_tbl = SATU_M2_setting,
@@ -2127,8 +2086,8 @@ struct mt9p111_reg mt9p111_regs = {
 	.satu_p1_tbl = SATU_P1_setting,
 	.satu_p1_tbl_size = ARRAY_SIZE(SATU_P1_setting),
 	.satu_p2_tbl = SATU_P2_setting,
-	.satu_p2_tbl_size = ARRAY_SIZE(SATU_P2_setting),
-	//Div6D1-HL-Camera-Saturation-00+}
+	.satu_p2_tbl_size = ARRAY_SIZE(SATU_P2_setting),	
+	//Div6D1-HL-Camera-Saturation-00+}		
 	//Div6D1-HL-Camera-Sharpness-00+{
 	.sharp_m2_tbl = SHARP_M2_setting,
 	.sharp_m2_tbl_size = ARRAY_SIZE(SHARP_M2_setting),
@@ -2139,8 +2098,8 @@ struct mt9p111_reg mt9p111_regs = {
 	.sharp_p1_tbl = SHARP_P1_setting,
 	.sharp_p1_tbl_size = ARRAY_SIZE(SHARP_P1_setting),
 	.sharp_p2_tbl = SHARP_P2_setting,
-	.sharp_p2_tbl_size = ARRAY_SIZE(SHARP_P2_setting),
-	//Div6D1-HL-Camera-Sharpness-00+}
+	.sharp_p2_tbl_size = ARRAY_SIZE(SHARP_P2_setting),	
+	//Div6D1-HL-Camera-Sharpness-00+}		
 	//Div6D1-HL-Camera-WB-00+{
 	.wb_auto_tbl = WB_AUTO_setting,
 	.wb_auto_tbl_size = ARRAY_SIZE(WB_AUTO_setting),
@@ -2151,7 +2110,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.wb_incandescent_tbl = WB_INCANDESCENT_setting,
 	.wb_incandescent_tbl_size = ARRAY_SIZE(WB_INCANDESCENT_setting),
 	.wb_fluorescent_tbl = WB_FLUORESCENT_setting,
-	.wb_fluorescent_tbl_size = ARRAY_SIZE(WB_FLUORESCENT_setting),
+	.wb_fluorescent_tbl_size = ARRAY_SIZE(WB_FLUORESCENT_setting),	
 	//Div6D1-HL-Camera-WB-00+}
 	//Div6D1-HL-Camera-Camcorder_HD-00+{
 	.hd_inittbl = hd_init_tbl,
@@ -2175,6 +2134,9 @@ struct mt9p111_reg mt9p111_regs = {
 	.iso_400_tbl = ISO_400_setting,
 	.iso_400_tbl_size = ARRAY_SIZE(ISO_400_setting),
 	.iso_800_tbl = ISO_800_setting,
-	.iso_800_tbl_size = ARRAY_SIZE(ISO_800_setting),
-	//Div2-SW6-MM-HL-Camera-ISO-00+}
+	.iso_800_tbl_size = ARRAY_SIZE(ISO_800_setting),		
+	//Div2-SW6-MM-HL-Camera-ISO-00+}	
 };
+
+
+

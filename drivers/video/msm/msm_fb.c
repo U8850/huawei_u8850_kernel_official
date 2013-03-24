@@ -43,9 +43,6 @@
 //SW2-6-MM-JH-Backlight_PWM-01+
 #include <mach/msm_iomap.h>  // for MSM_CLK_CTL_BASE
 //SW2-6-MM-JH-Backlight_PWM-01-
-/* SW5-1-MM-KW-Backlight_PWM-00+ { */
-#include "../../../arch/arm/mach-msm/smd_private.h"
-/* SW5-1-MM-KW-Backlight_PWM-00- } */
 
 #define MSM_FB_C
 #include "msm_fb.h"
@@ -472,13 +469,6 @@ static int msm_fb_probe(struct platform_device *pdev)
 
 	mfd->panel_info.frame_count = 0;
 	mfd->bl_level = mfd->panel_info.bl_max;
-	/* SW5-1-MM-KW-Backlight_PWM-00+ { */
-	#ifdef CONFIG_FB_MSM_LCDC_TOSHIBA_WVGA_PT
-	if ((fih_get_product_phase() > Product_PR2) && (fih_get_product_id() == Product_SF6)) {
-		bl_level_framework_store = mfd->bl_level;
-	}
-	#endif
-	/* SW5-1-MM-KW-Backlight_PWM-00- } */
 #ifdef CONFIG_FB_MSM_OVERLAY
 	mfd->overlay_play_enable = 1;
 #endif
@@ -767,10 +757,12 @@ static void msmfb_early_suspend(struct early_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
 						    early_suspend);
-	struct fb_info *fbi = mfd->fbi;
 
+	//struct fb_info *fbi = mfd->fbi;
+
+	printk(KERN_ERR "%s : %d enter - Clear FB Here!!\n", __FUNCTION__, __LINE__);
 	/* set the last frame on suspend as black frame */
-	memset(fbi->screen_base, 0x0, fbi->fix.smem_len);
+	//memset(fbi->screen_base, 0x0, fbi->fix.smem_len);
 	msm_fb_suspend_sub(mfd);
 }
 
@@ -2677,50 +2669,6 @@ static int msmfb_overlay_play_enable(struct fb_info *info, unsigned long *argp)
 	return 0;
 }
 
-static int msmfb_overlay_played(struct fb_info *info, void __user *p)
-{
-	int played;
-
-	if (copy_from_user(&played, p, sizeof(played))) {
-		printk(KERN_ERR "%s: ioctl failed \n",
-			__func__);
-		return -EFAULT;
-	}
-
-	if ( (played = mdp4_overlay_mixer_play(MDP4_MIXER0)) == 0) {
-		played = mdp4_overlay_mixer_play(MDP4_MIXER1);
-	}
-
-	if (copy_to_user(p, &played, sizeof(played))) {
-		printk(KERN_ERR "%s: copy2user failed \n",
-			__func__);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-static int msmfb_mdp_hw_revision(struct fb_info *info, void __user *p)
-{
-	int revision;
-
-	if (copy_from_user(&revision, p, sizeof(revision))) {
-		printk(KERN_ERR "%s: ioctl failed \n",
-			__func__);
-		return -EFAULT;
-	}
-
-	revision = mdp_hw_revision;
-
-	if (copy_to_user(p, &revision, sizeof(revision))) {
-		printk(KERN_ERR "%s: copy2user failed \n",
-			__func__);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
 #endif
 
 DECLARE_MUTEX(msm_fb_ioctl_ppp_sem);
@@ -2807,17 +2755,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		ret = msmfb_overlay_play_enable(info, argp);
 		up(&msm_fb_ioctl_ppp_sem);
 		break;
-//SW2-6-MM-JH-Overlay_played-00+
-	case MSMFB_OVERLAY_PLAYED:
-		ret = msmfb_overlay_played(info, argp);
-		break;
-//SW2-6-MM-JH-Overlay_played-00-
 #endif
-//SW2-6-MM-JH-Overlay_played-00+
-	case MSMFB_MDP_HW_REVISION:
-		ret = msmfb_mdp_hw_revision(info, argp);
-		break;
-//SW2-6-MM-JH-Overlay_played-00-
 	case MSMFB_BLIT:
 		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_blit(info, argp);

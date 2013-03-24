@@ -43,8 +43,6 @@ typedef enum
   Product_PR3   = 40,
   Product_PR4   = 50,
   Product_PR5   = 60,
-  Product_PCR   = 100,
-  Product_MP1   = 111,
   Product_PHASE_MAX   = 255,
   Product_PHASE_EXTEND_TO_DWORD = 0xFFFFFFFF, //SW252-rexer-smem-00
 }fih_virtual_phase_id_type;

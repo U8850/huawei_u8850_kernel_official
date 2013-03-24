@@ -130,7 +130,6 @@ struct miscdevice acdb_misc = {
 	.fops	= &acdb_fops,
 };
 
-//Div2-SW5-BSP-HUAWEI.B-1071-00+{
 static u8 check_device_info_already_present(
 		struct auddev_evt_audcal_info   audcal_info,
 			struct acdb_cache_node *acdb_cache_free_node)
@@ -143,16 +142,13 @@ static u8 check_device_info_already_present(
 			(audcal_info.acdb_id ==
 				acdb_cache_free_node->device_info.acdb_id)) {
 		MM_DBG("acdb values are already present\n");
-		/*if acdb state is not set for CAL_DATA_READY and node status
-		is filled, acdb state should be updated with CAL_DATA_READY
-		state*/
-		acdb_data.acdb_state |= CAL_DATA_READY;
 		/*checking for cache node status if it is not filled then the
 		acdb values are not cleaned from node so update node status
 		with acdb value filled*/
 		if (acdb_cache_free_node->node_status != ACDB_VALUES_FILLED) {
 			MM_DBG("device was released earlier\n");
 			acdb_cache_free_node->node_status = ACDB_VALUES_FILLED;
+			acdb_data.acdb_state |= CAL_DATA_READY;
 			return 2; /*node is presnet but status as not filled*/
 		}
 		return 1; /*node is present but status as filled*/
@@ -164,7 +160,6 @@ static u8 check_device_info_already_present(
 				 &audcal_info, sizeof(audcal_info));
 	return 0; /*cant find the node*/
 }
-//Div2-SW5-BSP-HUAWEI.B-1071-00+}
 
 static struct acdb_iir_block *get_audpp_irr_block(void)
 {

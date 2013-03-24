@@ -19,6 +19,8 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/pm_qos_params.h>
+#include <linux/regulator/consumer.h>
 #include <mach/gpio.h>
 #include <mach/board.h>
 #include <mach/camera.h>
@@ -94,6 +96,14 @@
 #define	MIPI_PHY_D1_CONTROL_MIPI_CLK_PHY_SHUTDOWNB_SHFT		0x9
 #define	MIPI_PHY_D1_CONTROL_MIPI_DATA_PHY_SHUTDOWNB_SHFT	0x8
 
+#define	CAMIO_VFE_CLK_SNAP			122880000
+#define	CAMIO_VFE_CLK_PREV			122880000
+
+/* AXI rates in KHz */
+#define MSM_AXI_QOS_PREVIEW     192000
+#define MSM_AXI_QOS_SNAPSHOT    192000
+#define MSM_AXI_QOS_RECORDING   192000
+
 static struct clk *camio_vfe_mdc_clk;
 static struct clk *camio_mdc_clk;
 static struct clk *camio_vfe_clk;
@@ -107,14 +117,13 @@ static struct clk *camio_csi_vfe_clk;
 static struct clk *camio_jpeg_clk;
 static struct clk *camio_jpeg_pclk;
 static struct clk *camio_vpe_clk;
-//static struct vreg *vreg_gp2;
-///static struct vreg *vreg_gp2;   /* FIHTDC, Div2-SW2-BSP, Ming, LCM */
-///static struct vreg *vreg_lvsw1; /* FIHTDC, Div2-SW2-BSP, Ming, LCM */
-//static struct vreg *vreg_gp16;
+static struct regulator *fs_vpe;
 static struct msm_camera_io_ext camio_ext;
 static struct msm_camera_io_clk camio_clk;
 static struct resource *camifpadio, *csiio;
 void __iomem *camifpadbase, *csibase;
+static uint32_t vpe_clk_rate;
+static uint32_t jpeg_clk_rate;
 
 void msm_io_w(u32 data, void __iomem *addr)
 {
@@ -375,7 +384,8 @@ int msm_camio_clk_enable(enum msm_camio_clk_type clktype)
 	case CAMIO_JPEG_CLK:
 		camio_jpeg_clk =
 		clk = clk_get(NULL, "jpeg_clk");
-		clk_set_min_rate(clk, 144000000);
+		jpeg_clk_rate = clk_round_rate(clk, 144000000);
+		clk_set_rate(clk, jpeg_clk_rate);
 		break;
 	case CAMIO_JPEG_PCLK:
 		camio_jpeg_pclk =
@@ -384,7 +394,8 @@ int msm_camio_clk_enable(enum msm_camio_clk_type clktype)
 	case CAMIO_VPE_CLK:
 		camio_vpe_clk =
 		clk = clk_get(NULL, "vpe_clk");
-		msm_camio_clk_set_min_rate(clk, 150000000);
+		vpe_clk_rate = clk_round_rate(clk, vpe_clk_rate);
+		clk_set_rate(clk, vpe_clk_rate);
 		break;
 	default:
 		break;
@@ -467,14 +478,15 @@ void msm_camio_clk_rate_set(int rate)
 	clk_set_rate(clk, rate);
 }
 
+int msm_camio_vfe_clk_rate_set(int rate)
+{
+	struct clk *clk = camio_vfe_clk;
+	return clk_set_rate(clk, rate);
+}
+
 void msm_camio_clk_rate_set_2(struct clk *clk, int rate)
 {
 	clk_set_rate(clk, rate);
-}
-
-void msm_camio_clk_set_min_rate(struct clk *clk, int rate)
-{
-	clk_set_min_rate(clk, rate);
 }
 
 static irqreturn_t msm_io_csi_irq(int irq_num, void *data)
@@ -508,8 +520,19 @@ int msm_camio_vpe_clk_disable(void)
 	return 0;
 }
 
-int msm_camio_vpe_clk_enable(void)
+int msm_camio_vpe_clk_enable(uint32_t clk_rate)
 {
+	fs_vpe = regulator_get(NULL, "fs_vpe");
+	if (IS_ERR(fs_vpe)) {
+		pr_err("%s: Regulator FS_VPE get failed %ld\n", __func__,
+			PTR_ERR(fs_vpe));
+		fs_vpe = NULL;
+	} else if (regulator_enable(fs_vpe)) {
+		pr_err("%s: Regulator FS_VPE enable failed\n", __func__);
+		regulator_put(fs_vpe);
+	}
+
+	vpe_clk_rate = clk_rate;
 	msm_camio_clk_enable(CAMIO_VPE_CLK);
 	return 0;
 }
@@ -838,6 +861,102 @@ int msm_camio_csi_config(struct msm_camera_csi_params *csi_params)
 	msm_io_w(0xFFF7F3FF, csibase + MIPI_INTERRUPT_MASK);
 	/*clear IRQ bits*/
 	msm_io_w(0xFFF7F3FF, csibase + MIPI_INTERRUPT_STATUS);
+
+	return rc;
+}
+void msm_camio_set_perf_lvl(enum msm_bus_perf_setting perf_setting)
+{
+	switch (perf_setting) {
+	case S_INIT:
+		add_axi_qos();
+		break;
+	case S_PREVIEW:
+		update_axi_qos(MSM_AXI_QOS_PREVIEW);
+		break;
+	case S_VIDEO:
+		update_axi_qos(MSM_AXI_QOS_RECORDING);
+		break;
+	case S_CAPTURE:
+		update_axi_qos(MSM_AXI_QOS_SNAPSHOT);
+		break;
+	case S_DEFAULT:
+		update_axi_qos(PM_QOS_DEFAULT_VALUE);
+		break;
+	case S_EXIT:
+		release_axi_qos();
+		break;
+	default:
+		CDBG("%s: INVALID CASE\n", __func__);
+	}
+}
+
+int msm_cam_core_reset(void)
+{
+	struct clk *clk1;
+	int rc = 0;
+
+	clk1 = clk_get(NULL, "csi_vfe_clk");
+	if (IS_ERR(clk1)) {
+		pr_err("%s: did not get csi_vfe_clk\n", __func__);
+		return PTR_ERR(clk1);
+	}
+
+	rc = clk_reset(clk1, CLK_RESET_ASSERT);
+	if (rc) {
+		pr_err("%s:csi_vfe_clk assert failed\n", __func__);
+		clk_put(clk1);
+		return rc;
+	}
+	usleep_range(1000, 1200);
+	rc = clk_reset(clk1, CLK_RESET_DEASSERT);
+	if (rc) {
+		pr_err("%s:csi_vfe_clk deassert failed\n", __func__);
+		clk_put(clk1);
+		return rc;
+	}
+	clk_put(clk1);
+
+	clk1 = clk_get(NULL, "csi_clk");
+	if (IS_ERR(clk1)) {
+		pr_err("%s: did not get csi_clk\n", __func__);
+		return PTR_ERR(clk1);
+	}
+
+	rc = clk_reset(clk1, CLK_RESET_ASSERT);
+	if (rc) {
+		pr_err("%s:csi_clk assert failed\n", __func__);
+		clk_put(clk1);
+		return rc;
+	}
+	usleep_range(1000, 1200);
+	rc = clk_reset(clk1, CLK_RESET_DEASSERT);
+	if (rc) {
+		pr_err("%s:csi_clk deassert failed\n", __func__);
+		clk_put(clk1);
+		return rc;
+	}
+	clk_put(clk1);
+
+	clk1 = clk_get(NULL, "csi_pclk");
+	if (IS_ERR(clk1)) {
+		pr_err("%s: did not get csi_pclk\n", __func__);
+		return PTR_ERR(clk1);
+	}
+
+	rc = clk_reset(clk1, CLK_RESET_ASSERT);
+	if (rc) {
+		pr_err("%s:csi_pclk assert failed\n", __func__);
+		clk_put(clk1);
+		return rc;
+	}
+	usleep_range(1000, 1200);
+	rc = clk_reset(clk1, CLK_RESET_DEASSERT);
+	if (rc) {
+		pr_err("%s:csi_pclk deassert failed\n", __func__);
+		clk_put(clk1);
+		return rc;
+	}
+	clk_put(clk1);
 
 	return rc;
 }

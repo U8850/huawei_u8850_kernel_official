@@ -41,7 +41,7 @@
 #include <linux/syscalls.h>
 #include <linux/kprobes.h>
 #include <linux/user_namespace.h>
-//#include <linux/delay.h>
+#include <linux/delay.h>
 
 #include <asm/uaccess.h>
 #include <asm/io.h>
@@ -79,7 +79,7 @@
 #endif
 
 //Div2-SW2-BSP, JOE HSU ,rmt_sync
-//extern int rmt_sync_call(void);
+extern int rmt_sync_call(void);
 
 /*
  * this is where the system-wide overflow UID and GID are defined, for
@@ -327,7 +327,6 @@ EXPORT_SYMBOL_GPL(kernel_restart);
 
 static void kernel_shutdown_prepare(enum system_states state)
 {
-	printk(KERN_EMERG "kernel_shutdown_prepare.\n");
 	blocking_notifier_call_chain(&reboot_notifier_list,
 		(state == SYSTEM_HALT)?SYS_HALT:SYS_POWER_OFF, NULL);
 	system_state = state;
@@ -355,13 +354,10 @@ EXPORT_SYMBOL_GPL(kernel_halt);
  */
 void kernel_power_off(void)
 {
-	printk(KERN_EMERG "kernel_power_off.\n");
 	kernel_shutdown_prepare(SYSTEM_POWER_OFF);
 	if (pm_power_off_prepare)
 		pm_power_off_prepare();
-	printk(KERN_EMERG "disable_nonboot_cpus().\n");
 	disable_nonboot_cpus();
-	printk(KERN_EMERG "sysdev_shutdown().\n");	
 	sysdev_shutdown();
 	printk(KERN_EMERG "Power down.\n");
 	machine_power_off();
@@ -381,8 +377,6 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	char buffer[256];
 	int ret = 0;
 
-  printk(KERN_EMERG "test ... SYSCALL_DEFINE4 .....\n");
-
 	/* We only trust the superuser with rebooting the system. */
 	if (!capable(CAP_SYS_BOOT))
 		return -EPERM;
@@ -401,10 +395,13 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !pm_power_off)
 		cmd = LINUX_REBOOT_CMD_HALT;
 
-  printk(KERN_EMERG "lock_kernel() .....\n");
 	lock_kernel();
 	switch (cmd) {
 	case LINUX_REBOOT_CMD_RESTART:
+    //Div2-SW2-BSP, JOE HSU ,rmt_sync
+    rmt_sync_call();
+    msleep(3000);  /* wait 3 seconds to final EFS sync*/
+    		
 		kernel_restart(NULL);
 		break;
 
@@ -417,32 +414,29 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		break;
 
 	case LINUX_REBOOT_CMD_HALT:
-/* Div2-SW2-BSP, JOE HSU, direct power off { */
-    printk(KERN_EMERG "test ... LINUX_REBOOT_CMD_HALT\n");
-    pm_power_off();
-		unlock_kernel();
-		do_exit(0);
-		break;
-/* Div2-SW2-BSP, JOE HSU, direct power off } */		
-/*		
+    //Div2-SW2-BSP, JOE HSU ,rmt_sync
+    rmt_sync_call();
+    msleep(3000);  /* wait 3 seconds to final EFS sync*/
+    		
 		kernel_halt();
 		unlock_kernel();
 		do_exit(0);
 		panic("cannot halt");
-*/		
 
 	case LINUX_REBOOT_CMD_POWER_OFF:
-    printk(KERN_EMERG "test ... LINUX_REBOOT_CMD_POWER_OFF\n");
+    //Div2-SW2-BSP, JOE HSU ,rmt_sync
+    rmt_sync_call();
+    msleep(3000);  /* wait 3 seconds to final EFS sync*/
+    
 		kernel_power_off();
-		printk(KERN_EMERG "unlock_kernel() .....\n");
 		unlock_kernel();
 		do_exit(0);
 		break;
 
 	case LINUX_REBOOT_CMD_RESTART2:
     //Div2-SW2-BSP, JOE HSU ,rmt_sync
-    //rmt_sync_call();
-    //msleep(3000);  /* wait 3 seconds to final EFS sync*/		
+    rmt_sync_call();
+    msleep(3000);  /* wait 3 seconds to final EFS sync*/		
 
 		if (strncpy_from_user(&buffer[0], arg, sizeof(buffer) - 1) < 0) {
 			unlock_kernel();
@@ -602,11 +596,6 @@ static int set_user(struct cred *new)
 	new_user = alloc_uid(current_user_ns(), new->uid);
 	if (!new_user)
 		return -EAGAIN;
-
-	if (!task_can_switch_user(new_user, current)) {
-		free_uid(new_user);
-		return -EINVAL;
-	}
 
 	if (atomic_read(&new_user->processes) >=
 				current->signal->rlim[RLIMIT_NPROC].rlim_cur &&
@@ -947,16 +936,15 @@ change_okay:
 
 void do_sys_times(struct tms *tms)
 {
-	struct task_cputime cputime;
-	cputime_t cutime, cstime;
+	cputime_t tgutime, tgstime, cutime, cstime;
 
-	thread_group_cputime(current, &cputime);
 	spin_lock_irq(&current->sighand->siglock);
+	thread_group_times(current, &tgutime, &tgstime);
 	cutime = current->signal->cutime;
 	cstime = current->signal->cstime;
 	spin_unlock_irq(&current->sighand->siglock);
-	tms->tms_utime = cputime_to_clock_t(cputime.utime);
-	tms->tms_stime = cputime_to_clock_t(cputime.stime);
+	tms->tms_utime = cputime_to_clock_t(tgutime);
+	tms->tms_stime = cputime_to_clock_t(tgstime);
 	tms->tms_cutime = cputime_to_clock_t(cutime);
 	tms->tms_cstime = cputime_to_clock_t(cstime);
 }
@@ -999,6 +987,7 @@ SYSCALL_DEFINE2(setpgid, pid_t, pid, pid_t, pgid)
 		pgid = pid;
 	if (pgid < 0)
 		return -EINVAL;
+	rcu_read_lock();
 
 	/* From this point forward we keep holding onto the tasklist lock
 	 * so that our parent does not change from under us. -DaveM
@@ -1052,6 +1041,7 @@ SYSCALL_DEFINE2(setpgid, pid_t, pid, pid_t, pgid)
 out:
 	/* All paths lead to here, thus we are safe. -DaveM */
 	write_unlock_irq(&tasklist_lock);
+	rcu_read_unlock();
 	return err;
 }
 
@@ -1374,8 +1364,7 @@ static void k_getrusage(struct task_struct *p, int who, struct rusage *r)
 {
 	struct task_struct *t;
 	unsigned long flags;
-	cputime_t utime, stime;
-	struct task_cputime cputime;
+	cputime_t tgutime, tgstime, utime, stime;
 	unsigned long maxrss = 0;
 
 	memset((char *) r, 0, sizeof *r);
@@ -1409,9 +1398,9 @@ static void k_getrusage(struct task_struct *p, int who, struct rusage *r)
 				break;
 
 		case RUSAGE_SELF:
-			thread_group_cputime(p, &cputime);
-			utime = cputime_add(utime, cputime.utime);
-			stime = cputime_add(stime, cputime.stime);
+			thread_group_times(p, &tgutime, &tgstime);
+			utime = cputime_add(utime, tgutime);
+			stime = cputime_add(stime, tgstime);
 			r->ru_nvcsw += p->signal->nvcsw;
 			r->ru_nivcsw += p->signal->nivcsw;
 			r->ru_minflt += p->signal->min_flt;

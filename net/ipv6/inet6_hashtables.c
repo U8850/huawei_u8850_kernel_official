@@ -20,6 +20,7 @@
 #include <net/inet_connection_sock.h>
 #include <net/inet_hashtables.h>
 #include <net/inet6_hashtables.h>
+#include <net/secure_seq.h>
 #include <net/ip.h>
 
 void __inet6_hash(struct sock *sk)
@@ -73,7 +74,7 @@ struct sock *__inet6_lookup_established(struct net *net,
 	 * have wildcards anyways.
 	 */
 	unsigned int hash = inet6_ehashfn(net, daddr, hnum, saddr, sport);
-	unsigned int slot = hash & (hashinfo->ehash_size - 1);
+	unsigned int slot = hash & hashinfo->ehash_mask;
 	struct inet_ehash_bucket *head = &hashinfo->ehash[slot];
 
 

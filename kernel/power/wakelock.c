@@ -55,8 +55,6 @@ static DEFINE_SPINLOCK(list_lock);
 static LIST_HEAD(inactive_locks);
 static struct list_head active_wake_locks[WAKE_LOCK_TYPE_COUNT];
 static int current_event_num;
-static struct workqueue_struct *suspend_sys_sync_work_queue;
-static DECLARE_COMPLETION(suspend_sys_sync_comp);
 struct workqueue_struct *suspend_work_queue;
 struct wake_lock main_wake_lock;
 suspend_state_t requested_suspend_state = PM_SUSPEND_MEM;
@@ -66,31 +64,6 @@ static struct wake_lock unknown_wakeup;
 static struct wake_lock deleted_wake_locks;
 static ktime_t last_sleep_time_update;
 static int wait_for_wakeup;
-
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-void dump_suspend_info(unsigned long data);
-DEFINE_TIMER(suspend_hang_timer, dump_suspend_info, 0, 0);
-pid_t pid_suspend = 0;
-
-const char *suspend_hang_state_list[] = {
-	"SUSPEND_HANG",
-	"EARLY_SUSPEND_HANG",
-	"LATE_RESUME_HANG"
-};
-
-void dump_suspend_info(unsigned long data)
-{
-	struct task_struct *p;
-	
-	pr_err("%s: Dump the call stack of suspend thread:\n", suspend_hang_state_list[data]);
-	p = find_task_by_pid_ns(pid_suspend, &init_pid_ns);
-	sched_show_task(p);
-	mod_timer(&suspend_hang_timer, jiffies + POLLING_DUMP_SUSPEND_HANG_SECS*HZ);
-}
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
-
 
 //Div2-SW2-BSP-pmlog, HenryMCWang +
 #include "linux/pmlog.h"
@@ -636,61 +609,6 @@ static void dump_wakelocks(unsigned long data)
 #endif /* CONFIG_FIH_DUMP_WAKELOCK */
 //Div251-PK-Dump_Wakelock-00+]
 
-static void suspend_sys_sync(struct work_struct *work)
-{
-	if (debug_mask & DEBUG_SUSPEND)
-		pr_info("PM: Syncing filesystems ... \n");
-
-	sys_sync();
-
-	if (debug_mask & DEBUG_SUSPEND)
-		pr_info("sync done.\n");
-}
-static DECLARE_WORK(suspend_sys_sync_work, suspend_sys_sync);
-
-void suspend_sys_sync_queue(void)
-{
-	queue_work(suspend_sys_sync_work_queue, &suspend_sys_sync_work);
-}
-
-static bool suspend_sys_sync_abort;
-static void suspend_sys_sync_handler(unsigned long);
-static DEFINE_TIMER(suspend_sys_sync_timer, suspend_sys_sync_handler, 0, 0);
-/* value should be less then half of input event wake lock timeout value
- * which is currently set to 5*HZ (see drivers/input/evdev.c)
- */
-#define SUSPEND_SYS_SYNC_TIMEOUT (HZ/4)
-static void suspend_sys_sync_handler(unsigned long arg)
-{
-	if (is_workqueue_empty(suspend_sys_sync_work_queue)) {
-		del_timer(&suspend_sys_sync_timer);
-		complete(&suspend_sys_sync_comp);
-	} else if (has_wake_lock(WAKE_LOCK_SUSPEND)) {
-		suspend_sys_sync_abort = true;
-		del_timer(&suspend_sys_sync_timer);
-		complete(&suspend_sys_sync_comp);
-	} else {
-		mod_timer(&suspend_sys_sync_timer, jiffies +
-				SUSPEND_SYS_SYNC_TIMEOUT);
-	}
-}
-
-int suspend_sys_sync_wait(void)
-{
-	suspend_sys_sync_abort = false;
-	if (!is_workqueue_empty(suspend_sys_sync_work_queue)) {
-		mod_timer(&suspend_sys_sync_timer, jiffies +
-				SUSPEND_SYS_SYNC_TIMEOUT);
-		wait_for_completion(&suspend_sys_sync_comp);
-	}
-	if (suspend_sys_sync_abort) {
-		pr_info("suspend aborted....while waiting for sys_sync\n");
-		return -EAGAIN;
-	}
-
-	return 0;
-}
-
 static void suspend(struct work_struct *work)
 {
 	int ret;
@@ -710,16 +628,8 @@ static void suspend(struct work_struct *work)
 		return;
 	}
 
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	pr_info("suspend: add suspend_hang_timer\n");
-	suspend_hang_timer.data = SUSPEND_HANG;
-	mod_timer(&suspend_hang_timer, jiffies + POLLING_DUMP_SUSPEND_HANG_SECS*HZ);
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
-
 	entry_event_num = current_event_num;
-	suspend_sys_sync_queue();
+	sys_sync();
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("suspend: enter suspend\n");
 
@@ -752,14 +662,6 @@ static void suspend(struct work_struct *work)
 			pr_info("suspend: pm_suspend returned with no event\n");
 		wake_lock_timeout(&unknown_wakeup, HZ / 2);
 	}
-	
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	pr_info("suspend: del suspend_hang_timer\n");
-	del_timer(&suspend_hang_timer);
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
-	
 }
 static DECLARE_WORK(suspend_work, suspend);
 
@@ -1032,13 +934,6 @@ static int __init wakelocks_init(void)
 	int ret;
 	int i;
 
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	struct cpu_workqueue_struct* p_cpu_wq;
-	struct task_struct* p_thread;
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
-
 	for (i = 0; i < ARRAY_SIZE(active_wake_locks); i++)
 		INIT_LIST_HEAD(&active_wake_locks[i]);
 
@@ -1061,27 +956,11 @@ static int __init wakelocks_init(void)
 		goto err_platform_driver_register;
 	}
 
-	INIT_COMPLETION(suspend_sys_sync_comp);
-	suspend_sys_sync_work_queue =
-		create_singlethread_workqueue("suspend_sys_sync");
-	if (suspend_sys_sync_work_queue == NULL) {
-		ret = -ENOMEM;
-		goto err_suspend_sys_sync_work_queue;
-	}
-
 	suspend_work_queue = create_singlethread_workqueue("suspend");
 	if (suspend_work_queue == NULL) {
 		ret = -ENOMEM;
 		goto err_suspend_work_queue;
 	}
-	
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	p_cpu_wq = GET_CPU_WORKQUEUE_FROM_WORKQUEUE(suspend_work_queue);
-	p_thread = GET_THREAD_FROM_CPU_WORKQUEUE(p_cpu_wq);
-	pid_suspend = p_thread->pid;
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
 
 #ifdef CONFIG_WAKELOCK_STAT
 	proc_create("wakelocks", S_IRUGO, NULL, &wakelock_stats_fops);
@@ -1102,7 +981,6 @@ static int __init wakelocks_init(void)
 
 	return 0;
 
-err_suspend_sys_sync_work_queue:	
 err_suspend_work_queue:
 	platform_driver_unregister(&power_driver);
 err_platform_driver_register:
@@ -1122,7 +1000,6 @@ static void  __exit wakelocks_exit(void)
 	remove_proc_entry("wakelocks", NULL);
 #endif
 	destroy_workqueue(suspend_work_queue);
-	destroy_workqueue(suspend_sys_sync_work_queue);
 	platform_driver_unregister(&power_driver);
 	platform_device_unregister(&power_device);
 	wake_lock_destroy(&unknown_wakeup);

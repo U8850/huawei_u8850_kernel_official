@@ -2092,8 +2092,8 @@ static int msm_reboot_call
 			memcpy((unsigned int *)(MSM_SHARED_RAM_BASE + 0x10), &POWERON_CAUSE_ENTER_DL, sizeof(uint32_t));
 		//Div2D5-LC-BSP-Porting_OTA_SDDownload-00 +]
 		//Div2D5-LC-BSP-Two_OTA_Path_for_ULI-00 +[
-		} else if (!strncmp(cmd, "SDL4", 4)) {
-			restart_reason = 0x53444C34;    //ASCII code of "SDL3"
+		} else if (!strncmp(cmd, "SDL3", 4)) {
+			restart_reason = 0x53444C33;    //ASCII code of "SDL3"
 			memcpy((unsigned int *)(MSM_SHARED_RAM_BASE + 0x10), &POWERON_CAUSE_ENTER_DL, sizeof(uint32_t));
 		//Div2D5-LC-BSP-Two_OTA_Path_for_ULI-00 +]
 		// FIH-Div2-SW2-BSP, Ming, Reset_PRL {

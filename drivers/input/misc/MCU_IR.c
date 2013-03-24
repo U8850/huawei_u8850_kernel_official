@@ -20,80 +20,6 @@ static struct ir_mcu mcu_gpio_data;
 #define PHASE_ID_IS_PR1 (fih_get_product_phase() == Product_PR1)
 //Div2D5-OwenHuang-SF5_IR_MCU_Settings-02+}
 
-//Div2D5-OwenHuang-SF5_CIR_GPIOSetting-01+{
-#define VALID_GPIO(gpio) ((gpio == 0xFF) ? 0:1)
-static int request_config_gpio(unsigned int gpio_number, unsigned int pull_up_down)
-{
-	int ret;
-	DBG_MSG("%s", __func__);
-
-	ret = gpio_request(gpio_number ,"");
-	if (ret)
-	{
-		ERR_MSG("GPIO tlmm GPIO_%d failed!", gpio_number);
-		return (-EIO);
-	}
-
-	ret = gpio_tlmm_config(GPIO_CFG(gpio_number, 0, GPIO_CFG_OUTPUT, pull_up_down, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-	if (ret)
-	{
-		ERR_MSG("GPIO tlmm GPIO_%d failed!", gpio_number);
-		return (-EIO);
-	}
-
-	return 0;
-}
-
-static int config_cir_gpio(void)
-{
-	DBG_MSG("%s", __func__);
-	INF_MSG("phase id(%d)", PHASE_ID);
-
-	if (PHASE_ID == Product_PR1)
-	{
-		mcu_gpio_data.mcu_buad  = MCU_IR_BAUD_RATE_PIN;
-		mcu_gpio_data.mcu_rst_n = MCU_IR_RESET_PIN; 
-		mcu_gpio_data.mcu_level_shift = 0xFF; // no use
-	}
-	else if (PHASE_ID >= Product_PR1p5 && PHASE_ID <= Product_PR2)
-	{
-		mcu_gpio_data.mcu_buad  = 0xFF; //no use
-		mcu_gpio_data.mcu_rst_n = MCU_IR_RESET_PIN; 
-		mcu_gpio_data.mcu_level_shift = MCU_LEVEL_SHIFT_EN;
-	}
-	else if (PHASE_ID > Product_PR2)
-	{
-		mcu_gpio_data.mcu_buad  = 0xFF; //no use
-		mcu_gpio_data.mcu_rst_n = MCU_IR_RESET_PIN; 
-		mcu_gpio_data.mcu_level_shift = MCU_LEVEL_SHIFT_EN_PCR;
-	}
-
-	INF_MSG("GPIO_Baud = %d, GPIO_rst_n = %d, GPIO_level_shift_en = %d", 
-		mcu_gpio_data.mcu_buad, mcu_gpio_data.mcu_rst_n, mcu_gpio_data.mcu_level_shift);
-
-	//setup and configure GPIO
-	if (VALID_GPIO(mcu_gpio_data.mcu_buad))//config baud rate pin
-	{
-		if (request_config_gpio(mcu_gpio_data.mcu_buad, GPIO_CFG_PULL_DOWN))
-			return -EIO;
-	}
-
-	if (VALID_GPIO(mcu_gpio_data.mcu_rst_n))//config rest_n pin
-	{
-		if (request_config_gpio(mcu_gpio_data.mcu_rst_n, GPIO_CFG_PULL_DOWN))
-			return -EIO;
-	}
-
-	if (VALID_GPIO(mcu_gpio_data.mcu_level_shift))//config level shift pin
-	{
-		if (request_config_gpio(mcu_gpio_data.mcu_level_shift, GPIO_CFG_PULL_UP))
-			return -EIO;
-	}
-
-	return 0;
-}
-//Div2D5-OwenHuang-SF5_CIR_GPIOSetting-01+}
-
 static int ir_mcu_open(struct inode *inode, struct file *file)
 {
 	DBG_MSG("%s", __func__);
@@ -200,18 +126,87 @@ static int __init sensor_probe(struct platform_device *pdev)
 	int ret;
 	INF_MSG("%s", __func__);
 
-	//Div2D5-OwenHuang-SF5_CIR_GPIOSetting-01+{
-	ret = config_cir_gpio();
+	mcu_gpio_data.mcu_buad  = MCU_IR_BAUD_RATE_PIN;
+	mcu_gpio_data.mcu_rst_n = MCU_IR_RESET_PIN ; 
+
+	INF_MSG("phase id(%d)", PHASE_ID);
+
+	//Div2D5-OwenHuang-SF5_CIR_GPIOSetting-00+{
+	//PCR GPIO
+	if (PHASE_ID > Product_PR2)
+	{
+		mcu_gpio_data.mcu_level_shift = MCU_LEVEL_SHIFT_EN_PCR;
+	}
+	else if(PHASE_ID != Product_PR1 && PHASE_ID <= Product_PR2)
+	{
+		mcu_gpio_data.mcu_level_shift = MCU_LEVEL_SHIFT_EN;
+	}
+	else
+	{
+		mcu_gpio_data.mcu_level_shift = 0xFF; //no use
+	}
+	//Div2D5-OwenHuang-SF5_CIR_GPIOSetting-00+}
+
+	//Div2D5-OwenHuang-SF5_IR_MCU_Settings-02+{
+	if (PHASE_ID_IS_PR1)
+	{
+		//Configure MCU Buad rate pin(GPIO_21)
+		ret = gpio_tlmm_config(GPIO_CFG(mcu_gpio_data.mcu_buad, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+		if (ret)
+		{
+			ERR_MSG("GPIO tlmm GPIO_%d failed!", mcu_gpio_data.mcu_buad);
+			return (-EFAULT);
+		}
+	
+		ret = gpio_request(mcu_gpio_data.mcu_buad, "mcu_baud");
+		if (ret)
+		{
+			ERR_MSG("Requset GPIO_%d failed!", mcu_gpio_data.mcu_buad);
+			return (-EFAULT);
+		}
+
+		
+		//set default buad rate is 192000 (Low->19200, high->9600)
+		gpio_direction_output(mcu_gpio_data.mcu_buad, 0);
+	}	
+	//Div2D5-OwenHuang-SF5_IR_MCU_Settings-02+}
+	
+	//Configure MCU reset pin(GPIO_22)
+	ret = gpio_tlmm_config(GPIO_CFG(mcu_gpio_data.mcu_rst_n, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
 	if (ret)
 	{
-		ERR_MSG("Setup CIR gpio failed!");
-		return -EIO;
+		ERR_MSG("GPIO tlmm GPIO_%d failed!", mcu_gpio_data.mcu_rst_n);
+		return (-EFAULT);
 	}
 
-	if (VALID_GPIO(mcu_gpio_data.mcu_level_shift))
-		gpio_set_value(mcu_gpio_data.mcu_level_shift, 1); //enable level shift pin
-	//Div2D5-OwenHuang-SF5_CIR_GPIOSetting-01+}
+	ret = gpio_request(mcu_gpio_data.mcu_rst_n, "mcu_rst_n");
+	if (ret)
+	{
+		ERR_MSG("Requset GPIO_%d failed!", mcu_gpio_data.mcu_rst_n);
+		return (-EFAULT);
+	}
 
+	//Div2D5-OwenHuang-SF5_IR_MCU_Settings-02+{
+	if (!PHASE_ID_IS_PR1)
+	{
+		//GPIO18 for level shift
+		ret = gpio_tlmm_config(GPIO_CFG(mcu_gpio_data.mcu_level_shift, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), GPIO_CFG_ENABLE); //Div2D5-OwenHuang-SF5_CIR_GPIOSetting-00*
+		if (ret)
+		{
+			ERR_MSG("GPIO tlmm GPIO_%d failed!", mcu_gpio_data.mcu_level_shift);
+			return (-EFAULT);
+		}
+
+		ret = gpio_request(mcu_gpio_data.mcu_level_shift, "mcu_level_shift");
+		if (ret)
+		{
+			ERR_MSG("Requset GPIO_%d failed!", mcu_gpio_data.mcu_level_shift);
+			return (-EFAULT);
+		}
+		gpio_set_value(mcu_gpio_data.mcu_level_shift, 1); //enable level shift
+	}
+	//Div2D5-OwenHuang-SF5_IR_MCU_Settings-02+}
+	
 	//reset mcu
 	gpio_direction_output(mcu_gpio_data.mcu_rst_n, 0);
 	msleep(200);

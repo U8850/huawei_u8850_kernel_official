@@ -34,6 +34,8 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/composite.h>
 #include <linux/usb/gadget.h>
+#include <linux/moduleparam.h>
+#include <linux/miscdevice.h>
 
 #include "gadget_chips.h"
 
@@ -79,6 +81,15 @@ static const char longname[] = "Gadget Android";
 #define PRODUCT_ID 0xC000
 //Div6-D1-JL-UsbPidVid-00+}
 
+//FXP Dmitriy Berchanskiy USB FXPCAYM-100 {
+/* support product ID */
+static int product_id = 0;
+static int android_set_pid(const char *val, struct kernel_param *kp);
+static int android_get_pid(char *buf, struct kernel_param *kp);
+
+module_param_call(product_id, android_set_pid, android_get_pid, &product_id, 0664);
+MODULE_PARM_DESC(product_id,"USB device product id");
+//FXP Dmitriy Berchanskiy USB FXPCAYM-100 }
 
 struct android_dev {
 	struct usb_composite_dev *cdev;
@@ -265,11 +276,6 @@ static int product_matches_functions(struct android_usb_product *p)
 {
 	struct usb_function		*f;
 	list_for_each_entry(f, &android_config_driver.functions, list) {
-        //Div6-D1-JL-FixAdbStatusUsbDebugging*{
-        //adb function enable/disable handled separetely
-        if(!strcmp(f->name, "adb"))
-            continue;
-        //Div6-D1-JL-FixAdbStatusUsbDebugging*}
 		if (product_has_function(p, f) == !!f->hidden)
 			return 0;
 	}
@@ -290,7 +296,7 @@ static int get_product_id(struct android_dev *dev)
             }
         }
     }
-    USBDBG("use default PID(%X)", dev->product_id);
+    USBDBG("PID(%X)", dev->product_id);
     /* use default product ID */
     return dev->product_id;
 }
@@ -495,6 +501,10 @@ void usb_switch_pid(int pid)
     }
 
     list_for_each_entry(func, &android_config_driver.functions, list) {
+        // FXPCAYM-213: Start - ADB should be controlled by USB debugging settings
+        if (!strcmp(func->name, "adb"))
+            continue;
+        // FXPCAYM-213: End
         func->hidden = 1;
         for (index = 0; index < up->num_functions; index++) {
             if (!strcmp(up->functions[index], func->name)){
@@ -704,6 +714,10 @@ static int __init android_probe(struct platform_device *pdev)
     struct android_usb_platform_data *pdata = pdev->dev.platform_data;
     struct android_dev *dev = _android_dev;
     int result;
+    //Div2-5-3-Peripheral-LL-UsbPorting-00+{
+    unsigned int info_size;
+    struct smem_host_oem_info *smem_Usb_type_info = NULL;
+    //Div2-5-3-Peripheral-LL-UsbPorting-00+}
 
     printk(KERN_INFO "android_probe pdata: %p\n", pdata);
 
@@ -745,6 +759,25 @@ static int __init android_probe(struct platform_device *pdev)
             strings_dev[STRING_SERIAL_IDX].s = 0;
     }
 
+    //Div2-5-3-Peripheral-LL-UsbPorting-00+{
+    smem_Usb_type_info = smem_get_entry(SMEM_ID_VENDOR2, &info_size);
+    if(smem_Usb_type_info) {
+        dev->product_id = smem_Usb_type_info->host_usb_id;
+        device_desc.idProduct = __constant_cpu_to_le16(dev->product_id);
+        USBDBG("ready to set USB PID(%X)", dev->product_id);
+    } else {
+        dev->product_id = USB_PID_FUNC_ALL;
+        device_desc.idProduct = __constant_cpu_to_le16(dev->product_id);
+        USBDBG("can't get USB PID from smem, set default PID(%X)", dev->product_id);
+    }
+
+#ifdef CONFIG_FIH_FTM
+    dev->product_id = USB_PID_FUNC_FTM;
+    device_desc.idProduct = __constant_cpu_to_le16(dev->product_id);
+    strings_dev[STRING_SERIAL_IDX].s = 0;
+    USBDBG("ready to set USB PID(%X) for FTM", dev->product_id);
+#endif
+    //Div2-5-3-Peripheral-LL-UsbPorting-00+}
 #ifdef CONFIG_DEBUG_FS
     result = android_debugfs_init(dev);
     if (result)
@@ -752,6 +785,35 @@ static int __init android_probe(struct platform_device *pdev)
 #endif
     return usb_composite_register(&android_usb_driver);
 }
+
+//Div6-D1-JL-PidSwitching-00+}
+
+//Fih DB ##Port switching{
+static int android_set_pid(const char *val, struct kernel_param *kp)
+{
+  struct android_dev *dev = _android_dev;
+  int ret = 0;
+  unsigned long tmp;
+
+  ret = strict_strtoul(val, 16, &tmp);
+  if( dev->product_id != (unsigned int)tmp )
+  {
+     dev->product_id = (unsigned int)tmp;
+     usb_switch_pid( (unsigned int)tmp);
+  }
+  return ret;
+}
+
+static int android_get_pid(char *buffer, struct kernel_param *pm)
+{
+   struct android_dev *dev = _android_dev;
+   int ret;
+   ret = sprintf(buffer,"%x", dev->product_id );
+   return  ret; 
+}
+
+//Fih DB ##Port switching}
+
 
 static int andr_runtime_suspend(struct device *dev)
 {
@@ -788,6 +850,7 @@ static int __init init(void)
     /* set default values, which should be overridden by platform data */
     dev->product_id = PRODUCT_ID;
     _android_dev = dev;
+
 
     return platform_driver_register(&android_platform_driver);
 }

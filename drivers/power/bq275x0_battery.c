@@ -86,10 +86,6 @@ struct bq275x0_device_info {
     bool        soc1;
     bool        socf;
     bool        temp_over400;
-    /* SW5, PinyCHWu, 20110715 { */
-    // add a flag to store low-temp status
-    unsigned	partial_flag;
-    /* }, SW5, PinyCHWu, 20110715 */
 
     struct timer_list polling_timer;
     struct delayed_work bq275x0_BATGD;
@@ -138,13 +134,10 @@ static bool ignore_batt_det = false;
 static struct proc_dir_entry *cbverify_proc_entry;
 static int product_id = 0;
 
-/* SW5, PinyCHWu, 20110811 { */
-/* Add device for enable/disable fakecap for dummy battery */
-#ifdef CONFIG_FIH_PROJECT_SF8
-static int fakecap_enable = 0;
-#endif
-/* }, SW5, PinyCHWu, 20110811 */
-
+//Slate Code Start
+int fih_charger; //Slate Code DEBUG
+EXPORT_SYMBOL(fih_charger);
+//Slate Code End
 static struct bq275x0_device_info *di;
 extern u32 msm_batt_get_batt_status(void);
 extern void msm_batt_notify_over_temperature(bool over_temperature);
@@ -159,13 +152,6 @@ extern u32 msm_batt_get_vbatt_voltage(void);
 extern int msm_batt_get_batt_level(void);
 extern void bq275x0_RomMode_get_bqfs_version(char* prj_name, int *version, u8* date);
 extern void msmrtc_set_wakeup_cycle_time(int cycle_time);
-extern void hsusb_chg_notify_over_tempearture(bool OT_flag);
-/* SW5, PinyCHWu, 20110715 { */
-extern void hsusb_chg_notify_low_temp_chg_current(bool partial_current);
-#define BELOW_NONE	0
-#define BELOW_PARTIAL	1
-#define BELOW_NORMAL	2
-/* }, SW5, PinyCHWu, 20110715 */
 
 void bq275x0_battery_ignore_battery_detection(bool ignore)
 {
@@ -497,9 +483,7 @@ int bq275x0_battery_health(void)
         return POWER_SUPPLY_HEALTH_OVERHEAT;
     if (!(di->chg_inh_temp_l < di->temp_C))
         return POWER_SUPPLY_HEALTH_COLD;
-    if (di->chg_inh)
-		return di->health;
-		
+        
     return POWER_SUPPLY_HEALTH_GOOD;
 }
 EXPORT_SYMBOL(bq275x0_battery_health);
@@ -976,20 +960,6 @@ static void bq275x0_battery_set_wakeup_cycle_time(void)
 #if defined(CONFIG_FIH_POWER_LOG)
         pmlog("Wakeup Cycle: 5 min\n");
 #endif
-    /* SW5, PinyCHWu, 20110715 { */
-    } else if ((product_id == Product_SF8 || product_id == Product_SFC || product_id == Product_SH8) && (di->partial_flag == BELOW_PARTIAL)) {
-        dev_info(&di->client->dev, "Wakeup Cycle: 30 sec for below 0 (SF8 serial)\n");
-        msmrtc_set_wakeup_cycle_time(30);
-#if defined(CONFIG_FIH_POWER_LOG)
-        pmlog("Wakeup Cycle: 30 sec\n");
-#endif
-    } else if ((product_id == Product_SF8 || product_id == Product_SFC || product_id == Product_SH8) && (di->current_uA > 0)) {
-        dev_info(&di->client->dev, "Wakeup Cycle: 1 min for charging (SF8 serial)\n");
-        msmrtc_set_wakeup_cycle_time(60);
-#if defined(CONFIG_FIH_POWER_LOG)
-        pmlog("Wakeup Cycle: 1 min\n");
-#endif
-    /* }, SW5, PinyCHWu, 20110715 */
     } else if (di->socf) {  /* Critial Low Battery Alarm */
         dev_info(&di->client->dev, "Wakeup Cycle: 10 min\n");
         msmrtc_set_wakeup_cycle_time(600);
@@ -1005,7 +975,7 @@ static void bq275x0_battery_set_wakeup_cycle_time(void)
     } else {                /* Normal */
 		if (product_id == Product_FB3 && di->temp_over400)
 			return;
-
+		
         dev_info(&di->client->dev, "Wakeup Cycle: Stop\n");
         msmrtc_set_wakeup_cycle_time(0);
 #if defined(CONFIG_FIH_POWER_LOG)
@@ -1051,13 +1021,10 @@ static void bq275x0_battery_update_flags(u16 *pflags)
         }
 
         if (test_on && test_item[BQ275X0_CBVERIFY_OTP_TEST]) {
-			current_chg_inh = di->chg_inh;
             if (test_value[BQ275X0_CBVERIFY_OTP_TEST] <= di->chg_inh_temp_l || 
                 test_value[BQ275X0_CBVERIFY_OTP_TEST] >= di->chg_inh_temp_h)
                 current_chg_inh = true;
-            else if (di->chg_inh && 
-				(test_value[BQ275X0_CBVERIFY_OTP_TEST] >= (di->chg_inh_temp_l + di->temp_hys) &&
-				 test_value[BQ275X0_CBVERIFY_OTP_TEST] <= (di->chg_inh_temp_h - di->temp_hys)))
+            else
                 current_chg_inh = false;
         } else
             current_chg_inh = flags & (0x1 << BQ275X0_FLAGS_CHG_INH) ? true : false;
@@ -1077,12 +1044,16 @@ static void bq275x0_battery_update_flags(u16 *pflags)
             dev_info(&di->client->dev, "FC flag is set, but soc is not 100\n");
             di->charge_rsoc = 100;
         }
-        
-        if (test_on && test_item[BQ275X0_CBVERIFY_CHARGING_TEST])
+//Slate Code Start
+        if (fih_charger == 1)
+	    	msm_batt_notify_charging_state(false);
+		else if (fih_charger == 2)
+	    	msm_batt_notify_charging_state(true); //Slate Code Ends
+        else if (test_on && test_item[BQ275X0_CBVERIFY_CHARGING_TEST])
             msm_batt_notify_charging_state(test_value[BQ275X0_CBVERIFY_CHARGING_TEST]);            
         else
             msm_batt_notify_charging_state(di->charging);
-        
+
         dev_info(&di->client->dev, "flags = 0x%04x\n", flags);
     } else {
         dev_err(&di->client->dev, "Read FLAGS register failed\n");
@@ -1116,47 +1087,6 @@ static void bq275x0_battery_check_temperature_over400(void)
     mutex_unlock(&battery_mutex);
 }
 
-/* SW5, PinyCHWu, 20110715 { */
-// change low-temp charging current
-static void bq275x0_battery_check_temperature_below0(void)
-{
-	if (!di->charging || di->chg_inh) {
-		if (di->partial_flag != BELOW_NONE) {
-			di->partial_flag = BELOW_NONE;
-			dev_info(&di->client->dev, "[Below 0] just change flag to none\n");
-		}
-	} else {
-		if (di->temp_C <= 0) {
-			if (di->partial_flag != BELOW_PARTIAL) {
-				di->partial_flag = BELOW_PARTIAL;
-				hsusb_chg_notify_low_temp_chg_current(true);
-				dev_info(&di->client->dev, "[Below 0] set partial current\n");
-			}
-		} else {
-			if (di->partial_flag == BELOW_PARTIAL) {
-				di->partial_flag = BELOW_NORMAL;
-				hsusb_chg_notify_low_temp_chg_current(false);
-				dev_info(&di->client->dev, "[Below 0] set normal current\n");
-			}
-		}
-	}
-}
-
-void bq275x0_battery_clear_partial_flag(void)
-{
-	if (di == NULL) {
-		printk(KERN_INFO "[%s] battery information is not ready\n", __func__);
-		return;
-	}
-
-	if (di->partial_flag != BELOW_NONE) {
-		di->partial_flag = BELOW_NONE;
-		dev_info(&di->client->dev, "[Below 0] just change flag to none\n");
-	}
-}
-EXPORT_SYMBOL(bq275x0_battery_clear_partial_flag);
-/* }, SW5, PinyCHWu, 20110715 */
-
 static unsigned long elapsed_time = 0;
 static void bq275x0_battery_update_batt_status(void)
 {
@@ -1189,10 +1119,6 @@ static void bq275x0_battery_update_batt_status(void)
     
     if (product_id == Product_FB3) {
         bq275x0_battery_check_temperature_over400();
-    /* SW5, PinyCHWu, 20110715 { */
-    } else if ((product_id == Product_SF8) || (product_id == Product_SFC) || (product_id == Product_SH8) ) {
-	bq275x0_battery_check_temperature_below0();
-    /* }, SW5, PinyCHWu, 20110715 */
     }
 	
     bq275x0_battery_set_wakeup_cycle_time();
@@ -1287,15 +1213,7 @@ static int bq275x0_battery_get_property(struct power_supply *psy,
             val->intval = di->charge_rsoc;
 #endif
     }
-
-/* SW5, PinyCHWu, 20110811 { */
-/* Add device for enable/disable fakecap for dummy battery */
-#ifdef CONFIG_FIH_PROJECT_SF8
-	if (fakecap_enable != 0)
-		val->intval = 50;
-#endif
-/* }, SW5, PinyCHWu, 20110811 */
-
+            
 #if defined(CONFIG_FIH_POWER_LOG)
         pmlog("batt : %d\%_%dmV_%dmA_%ddC_%s_%s_%s\n",
                 di->charge_rsoc,    
@@ -1435,13 +1353,10 @@ static void bq275x0_battery_BATGD(struct work_struct *work)
     }
 
     if (test_on && test_item[BQ275X0_CBVERIFY_OTP_TEST]) {
-		current_chg_inh = di->chg_inh;
         if (test_value[BQ275X0_CBVERIFY_OTP_TEST] <= di->chg_inh_temp_l || 
             test_value[BQ275X0_CBVERIFY_OTP_TEST] >= di->chg_inh_temp_h)
             current_chg_inh = true;
-        else if (di->chg_inh && 
-				(test_value[BQ275X0_CBVERIFY_OTP_TEST] >= (di->chg_inh_temp_l + di->temp_hys) &&
-				 test_value[BQ275X0_CBVERIFY_OTP_TEST] <= (di->chg_inh_temp_h - di->temp_hys)))
+        else
             current_chg_inh = false;
     } else
         current_chg_inh = flags & (0x1 << BQ275X0_FLAGS_CHG_INH) ? 1 : 0;   /* Charge Inhibit Flag */
@@ -1600,6 +1515,21 @@ static void bq275x0_battery_update(struct work_struct *work)
     wake_unlock(&di->bq275x0_wakelock);
     wake_lock_timeout(&di->bq275x0_wakelock, 1 * HZ);
 }
+//Slate Code Start Here
+void bq27x0_battery_charging_status_update(void)
+{
+     //dev_info(di->dev, "Shashi DEBUG bq27x0_battery_charging_status_update\n");
+     wake_lock(&di->bq275x0_wakelock);
+     schedule_work(&di->bq275x0_update);
+     #if 0
+	 mod_timer(&di->polling_timer,
+            jiffies + msecs_to_jiffies(1000));
+     di->polling_interval = 1000;
+     fih_update_timer = 1;
+     #endif
+}
+//Slate code Ends here
+EXPORT_SYMBOL(bq27x0_battery_charging_status_update);
 
 static void bq275x0_battery_update_soc(struct work_struct *work)
 {
@@ -1611,12 +1541,6 @@ static void bq275x0_battery_update_soc(struct work_struct *work)
     bq275x0_battery_update_flags(&flags);
     if (product_id == Product_FB3) {
         bq275x0_battery_check_temperature_over400();
-    /* SW5, PinyCHWu, 20110715 { */
-    } else if ((product_id == Product_SF8) || (product_id == Product_SFC) || (product_id == Product_SH8)) {
-    	di->current_uA = bq275x0_battery_current();
-    	dev_info(di->dev, "Update current=%d\n", di->current_uA);
-	bq275x0_battery_check_temperature_below0();
-    /* }, SW5, PinyCHWu, 20110715 */
     }
 	bq275x0_battery_set_wakeup_cycle_time();
 	
@@ -1642,9 +1566,6 @@ static enum _battery_info_type_ g_current_cmd = 0;
 static int g_smem_error = -1;
 static int g_bb_voltage = -1;
 static int g_charging_on= 0;
-/* SW5, PinyCHWu, 20110720 { */
-static int g_current    = 0;
-/* }, SW5, PinyCHWu, 20110720 */
 
 extern int proc_comm_config_coin_cell(int vset, int *voltage, int status);
 extern int proc_comm_config_chg_current(bool on, int curr);
@@ -1678,11 +1599,6 @@ static ssize_t bq275x0_battery_ftm_battery_store(struct device *dev,
     case BATT_GET_DEVICE_TYPE:
         g_device_type = bq275x0_battery_device_type();
         break;
-/* SW5, PinyCHWu, 20110720 { */
-    case BATT_CURRENT_INFO:
-	g_current = bq275x0_battery_current();
-	break;
-/* }, SW5, PinyCHWu, 20110720 */
     default:
         break;
     };
@@ -1719,10 +1635,6 @@ static ssize_t bq275x0_battery_ftm_battery_show(struct device *dev,
         return sprintf(buf, "%d\n", 1);
     case BATT_GET_DEVICE_TYPE:
         return sprintf(buf, "%x\n", g_device_type);
-/* SW5, PinyCHWu, 20110720 { */
-    case BATT_CURRENT_INFO:
-	return sprintf(buf, "%d\n", g_current);
-/* }, SW5, PinyCHWu, 20110720 */
     default:
         return 0;
     };
@@ -1828,27 +1740,6 @@ static ssize_t bq275x0_accuracy_store(struct device *dev,
 }
 
 static DEVICE_ATTR(accuracy, 0644, NULL,  bq275x0_accuracy_store);
-
-/* SW5, PinyCHWu, 20110811 { */
-/* Add device for enable/disable fakecap for dummy battery */
-#ifdef CONFIG_FIH_PROJECT_SF8
-static ssize_t bq275x0_fakecap_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "fake=%d\n", fakecap_enable);
-}
-static ssize_t bq275x0_fakecap_store(struct device *dev, 
-        struct device_attribute *attr, const char *buf, size_t count)
-{
-	int value;
-
-	sscanf(buf, "%d", &value);
-	fakecap_enable = value;
-	return count;
-}
-static DEVICE_ATTR(fakecap, 0644, bq275x0_fakecap_show,  bq275x0_fakecap_store);
-#endif
-/* SW5, PinyCHWu, 20110811 */
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void bq275x0_late_resume(struct early_suspend *h)
@@ -1995,16 +1886,12 @@ bq275x0_cbverify_proc_read(char *page, char **start, off_t off,
             break;
         case BQ275X0_CBVERIFY_LOW_BAT_TEST:
             snprintf(buf, 256, "%sLOWBAT", buf);
-            break;
-        case BQ275X0_CBVERIFY_CHARGING_SWITCH:
-            snprintf(buf, 256, "%sCHGSW", buf);
         }
         
         if (test_item[i]) {
             snprintf(buf, 256, "%s[T]", buf);
             if (i != BQ275X0_CBVERIFY_REM_OTP &&
-                i != BQ275X0_CBVERIFY_REM_DISCHARING &&
-                i != BQ275X0_CBVERIFY_CHARGING_SWITCH)
+                i != BQ275X0_CBVERIFY_REM_DISCHARING)
                 snprintf(buf, 256, "%s%d\n", buf, test_value[i]);
             else
                 snprintf(buf, 256, "%s\n", buf);
@@ -2044,7 +1931,6 @@ bq275x0_cbverify_proc_write(struct file *file, const char __user *buffer,
             test_value[item] = value;
         case BQ275X0_CBVERIFY_REM_OTP:
         case BQ275X0_CBVERIFY_REM_DISCHARING:
-		case BQ275X0_CBVERIFY_CHARGING_SWITCH:
             test_item[item] = on;
             break;
         case BQ275X0_CBVERIFY_TEST_ENABLE:
@@ -2053,8 +1939,6 @@ bq275x0_cbverify_proc_write(struct file *file, const char __user *buffer,
                 bq275x0_battery_BATGD(NULL);
             if (test_item[BQ275X0_CBVERIFY_LOW_BAT_TEST])
                 bq275x0_battery_BATLOW(NULL);
-            if (test_item[BQ275X0_CBVERIFY_CHARGING_SWITCH])
-				hsusb_chg_notify_over_tempearture(true);
             msm_batt_disable_discharging_monitor(test_item[BQ275X0_CBVERIFY_REM_DISCHARING]);
             break;
         case BQ275X0_CBVERIFY_TEST_DISABLE:
@@ -2065,8 +1949,6 @@ bq275x0_cbverify_proc_write(struct file *file, const char __user *buffer,
                 bq275x0_battery_BATLOW(NULL);
             if (test_item[BQ275X0_CBVERIFY_REM_DISCHARING])
                 msm_batt_disable_discharging_monitor(false);
-            if (test_item[BQ275X0_CBVERIFY_CHARGING_SWITCH])
-				hsusb_chg_notify_over_tempearture(false);
             for (i = 0; i < BQ275X0_CBVERIFY_MAX; i++) {
                 test_item[i] = false;
                 test_value[i] = 0;
@@ -2133,9 +2015,6 @@ static int bq275x0_battery_probe(struct i2c_client *client,
     di->soc1            = false;
     di->socf            = false;
     di->temp_over400    = false;
-    /* SW5, PinyCHWu, 20110715 { */ 
-    di->partial_flag	= 0;
-    /* }, SW5, PinyCHWu, 20110715 */
     
     if (di->dbg_enable)
         dev_info(&client->dev, "[DBG MECHANISM ENABLE]\n");
@@ -2245,18 +2124,7 @@ static int bq275x0_battery_probe(struct i2c_client *client,
         dev_err(&client->dev,
                "%s: dev_attr_accuracy failed\n", __func__);
     }
-
-/* SW5, PinyCHWu, 20110811 { */
-/* Add device for enable/disable fakecap for dummy battery */
-#ifdef CONFIG_FIH_PROJECT_SF8
-    retval = device_create_file(&client->dev, &dev_attr_fakecap);
-    if (retval) {
-        dev_err(&client->dev,
-               "%s: dev_attr_fakecap failed\n", __func__);
-    }
-#endif
-/* }, SW5, PinyCHWu, 20110811 */
-   
+    
     test_on = false;
     for (i = 0; i < BQ275X0_CBVERIFY_MAX; i++) {
         test_item[i] = false;

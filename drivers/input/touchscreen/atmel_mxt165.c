@@ -1,36 +1,18 @@
-/* drivers/input/touchscreen/atmel_mxt165.c
- *
- * Copyright (c) 2011 2011 Foxconn Communication Technology Corporation.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
-
-#include <linux/delay.h>
-#include <linux/device.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
-#include <linux/i2c.h>
-#include <linux/init.h>
-#include <linux/input.h>
-#include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/i2c.h>
+#include <linux/irq.h>
+#include <linux/input.h>
+#include <linux/interrupt.h>
+#include <linux/delay.h>
+#include <linux/earlysuspend.h>
 #include <mach/gpio.h>
 #include <mach/vreg.h>
-#include <../smd_private.h>	//Div2-D5-Peripheral-FG-TouchAddNewPhase-00+
 
-#include <linux/atmel_mxt165.h>
 #include <linux/atmel_mxt165_info_block_driver.h>
 #include <linux/atmel_mxt165_std_objects_driver.h>
 #include <linux/atmel_mxt165_touch_driver.h>
+#include <linux/atmel_mxt165.h>
 
 info_block_t *info_block;
 static uint16_t g_I2CAddress;
@@ -48,8 +30,10 @@ module_param_named(
     fw_version, cap_touch_fw_version, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
 
-// Return 1: Down, 0: Up, -1: Failed.
-int Touch_FakeProximity(void)
+// Return 1: Face Down.
+// Return 0: Face Up.
+// Return -1: Failed.
+int MXT_FaceDetection(void)
 {
     if (atmel_mxt165 == NULL)
     {
@@ -58,11 +42,16 @@ int Touch_FakeProximity(void)
     }
     else
     {
-        TCH_DBG(DB_LEVEL1, "fake_proximity = %d", atmel_mxt165->fake_proximity);
-        return atmel_mxt165->fake_proximity;
+        TCH_DBG(DB_LEVEL1, "facedetect = %d", atmel_mxt165->facedetect);
+        return atmel_mxt165->facedetect;
     }
 }
-EXPORT_SYMBOL(Touch_FakeProximity);
+
+int Touch_FaceDetection(void)
+{
+    return MXT_FaceDetection();
+}
+EXPORT_SYMBOL(Touch_FaceDetection);
 
 uint8_t read_mem(uint16_t start, uint8_t size, uint8_t *mem)
 {
@@ -285,27 +274,6 @@ void MXT_GetConfigStatus(void)
     TCH_DBG(DB_LEVEL1, "Done.");
 }
 
-void MXT_BackupNV(void)
-{
-    uint16_t addr   = 0;
-    uint8_t data    = 0x55; 
-    //g_NVBackUp = 1;
-    addr = g_RegAddr[GEN_COMMANDPROCESSOR_T6] + 1;  // Call the BackNV field, command processor + 1
-    write_mem(addr, 1, &data);
-    msleep(10);
-    addr = g_RegAddr[GEN_COMMANDPROCESSOR_T6] + 0;  // Call the Reset field, command processor + 0
-    write_mem(addr, 1, &data);
-    msleep(100);
-    TCH_DBG(DB_LEVEL0, "Reset Done.");
-    data = 0x00;
-    addr = g_RegAddr[GEN_COMMANDPROCESSOR_T6] + 1;  
-    write_mem(addr, 1, &data);
-    addr = g_RegAddr[GEN_COMMANDPROCESSOR_T6] + 0;  
-    write_mem(addr, 1, &data);
-    //g_NVBackUp = 0;
-    TCH_DBG(DB_LEVEL0, "Done.");
-}
-
 void MXT_Calibrate(void)
 {
     uint16_t addr = 0;
@@ -319,22 +287,19 @@ void MXT_Calibrate(void)
 
 void MXT_InitConfig(void)
 {
-    uint8_t v16_T7[]  = { 32, 16, 50 };
-    uint8_t v16_T8[]  = { 9, 0, 15, 15, 0, 0, 1, 53 };
-    uint8_t v16_T9[]  = { 143, 0, 0, 15, 11, 0, 32, 70, 3, 3, 0, 5, 5, 32, 5, 10, 30, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20 };   
+    uint8_t v16_T7[]  = { 32, 10, 50 };
+    uint8_t v16_T8[]  = { 6, 0, 5, 5, 0, 0, 15, 30 };
+    uint8_t v16_T9[]  = { 143, 0, 0, 15, 11, 0, 48, 60, 3, 3, 0, 3, 1, 0, 2, 5, 5, 5, 0x0, 0x0, 0x0, 0x0, 0, 0, 0, 0, 0, 0, 0, 0, 18 };
     uint8_t v16_T15[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     uint8_t v16_T18[] = { 0, 0, };
     uint8_t v16_T19[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t v16_T20[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t v16_T22[] = { 5, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 7, 12, 16, 255, 255, 0 };
-    uint8_t v16_T23[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t v16_T24[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t v16_T25[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t v16_T27[] = { 0, 0, 0, 0, 0, 0, 0 };
+    uint8_t v16_T20[] = { 0, 100, 100, 100, 100, 0, 0, 30, 20, 4, 15, 5 };
+    uint8_t v16_T22[] = { 7, 0, 0, 0x0, 0x0, 0x0, 0x0, 0, 30, 0, 0, 0, 10, 15, 20, 30, 0 };
+    uint8_t v16_T23[] = { 0, 0, 0, 0, 0, 0, 0, 0x0, 0x0, 0, 0, 0x0, 0x0 };
+    uint8_t v16_T24[] = { 0, 0, 0x0, 0x0, 0, 0, 0, 0, 0, 0, 0, 0x0, 0, 0x0, 0, 0x0, 0, 0x0, 0 };
+    uint8_t v16_T25[] = { 0, 0, 0xF8, 0x2A, 0x70, 0x17, 0x28, 0x23, 0x88, 0x13, 0x0, 0x0, 0x0, 0x0 };
+    uint8_t v16_T27[] = { 0, 0, 0, 0, 0, 0x0, 0x0 };
     uint8_t v16_T28[] = { 0, 0, 0, 16, 16, 30 };
-
-    uint8_t v16_T9_phase2[]  = { 143, 0, 0, 16, 10, 1, 32, 70, 3, 3, 0, 5, 5, 32, 5, 10, 30, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20 };      
-    uint8_t v16_T15_phase2[] = { 131, 6, 10, 4, 1, 1, 16, 50, 2, 0, 0 };
 
     uint8_t iLoop = 0, MaxOBJSize = 0;
     uint16_t addr;
@@ -344,7 +309,7 @@ void MXT_InitConfig(void)
     obj_index = info_block->objects;
     cap_touch_fw_version = info_block->info_id->version;
 
-    //if (info_block->info_id->version == 16)
+//    if (info_block->info_id->version == 0x16)
     {
         TCH_MSG("Use 1.6 firmware config.");
         for (iLoop=0; iLoop<MaxOBJSize; iLoop++)
@@ -359,20 +324,10 @@ void MXT_InitConfig(void)
                 write_mem(addr, sizeof(v16_T8), v16_T8);
                 break;
             case TOUCH_MULTITOUCHSCREEN_T9 :
-                //Div2-D5-Peripheral-FG-TouchAddNewPhase-00*[
-                if (atmel_mxt165->dynamic.TS_PHASE == TOUCH_PHASE1)
-                    write_mem(addr, sizeof(v16_T9), v16_T9);
-                else
-                    write_mem(addr, sizeof(v16_T9_phase2), v16_T9_phase2);
-                //Div2-D5-Peripheral-FG-TouchAddNewPhase-00*[
+                write_mem(addr, sizeof(v16_T9), v16_T9);
                 break;
             case TOUCH_KEYARRAY_T15 :
-                //Div2-D5-Peripheral-FG-TouchAddNewPhase-00*[
-                if (atmel_mxt165->dynamic.TS_PHASE == TOUCH_PHASE1)
-                    write_mem(addr, sizeof(v16_T15), v16_T15);
-                else
-                    write_mem(addr, sizeof(v16_T15_phase2), v16_T15_phase2);
-                //Div2-D5-Peripheral-FG-TouchAddNewPhase-00*]
+                write_mem(addr, sizeof(v16_T15), v16_T15);
                 break;
             case SPT_COMCONFIG_T18 :
                 write_mem(addr, sizeof(v16_T18), v16_T18);
@@ -413,7 +368,7 @@ void MXT_InitConfig(void)
 }
 
 static void atmel_mxt165_reset(void)
-{
+{   // Active RESET pin to wakeup ts
     int i;
 
     if (gpio_get_value(GPIO_TP_RST_N) == LOW)
@@ -430,27 +385,6 @@ static void atmel_mxt165_reset(void)
 
     TCH_ERR("Failed.");
 }
-
-//Div2-D5-Peripheral-FG-TouchAddNewPhase-00+[
-static void atmel_mxt165_dynamicalloc(void)
-{
-    int product_id = fih_get_product_id();
-    int product_phase = fih_get_product_phase();
-
-    if (product_id == Product_SF8 && product_phase <= Product_PR1p5)
-    {
-        atmel_mxt165->dynamic.TS_PHASE = TOUCH_PHASE1;
-        atmel_mxt165->dynamic.TS_MAX_Y = 975;
-    }
-    else
-    {
-        atmel_mxt165->dynamic.TS_PHASE = TOUCH_PHASE2;
-        atmel_mxt165->dynamic.TS_MAX_Y = 1023;
-    }
-    TCH_MSG("fih_get_product_id = %d, fih_get_product_phase = %d.", product_id, product_phase);
-    TCH_MSG("Phase = %d", atmel_mxt165->dynamic.TS_PHASE);
-}
-//Div2-D5-Peripheral-FG-TouchAddNewPhase-00+]
 
 uint8_t atmel_mxt165_check(uint8_t I2C_address)
 {
@@ -526,7 +460,6 @@ uint8_t atmel_mxt165_check(uint8_t I2C_address)
 
     MXT_GetConfigStatus();
     MXT_InitConfig();
-    MXT_BackupNV(); //Ming
 
     TCH_DBG(DB_LEVEL1, "Done.");
     return(DRIVER_SETUP_OK);
@@ -542,130 +475,167 @@ ERR_1:
 static void atmel_mxt165_report(struct atmel_mxt165_info *ts, int i, int x, int y, int pressure)
 {
     if (pressure == NO_TOUCH)
-    {	// Finger Up.
-        if (ts->points[i].first_area == PRESS_TOUCH_AREA)
-        {	// Touch Area
-            //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*[
-#ifdef ATMEL_MXT165_MT
-            input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 0);
-            input_report_abs(ts->touch_input, ABS_MT_POSITION_X, x);
-            input_report_abs(ts->touch_input, ABS_MT_POSITION_Y, y);
-#else
-            input_report_abs(ts->touch_input, ABS_X, x);
-            input_report_abs(ts->touch_input, ABS_Y, y);
-            input_report_abs(ts->touch_input, ABS_PRESSURE, pressure);
-            input_report_key(ts->touch_input, BTN_TOUCH, 0);
-#endif
-            //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*]
-        }
-        else if (ts->points[i].first_area == PRESS_KEY1_AREA)
-        {	// Key1 Area
-            input_report_key(ts->key_input, KEY_HOME, 0);
-            TCH_MSG("POS%d Report HOME key Up.", i+1);
-        }
-        else if (ts->points[i].first_area == PRESS_KEY2_AREA)
-        {	// Key2 Area
-            input_report_key(ts->key_input, KEY_MENU, 0);
-            TCH_MSG("POS%d Report MENU key Up.", i+1);
-        }
-        else if (ts->points[i].first_area == PRESS_KEY3_AREA)
-        {	// Key3 Area
-            input_report_key(ts->key_input, KEY_BACK, 0);
-            TCH_MSG("POS%d Report BACK key Up.", i+1);
-        }
-        else if (ts->points[i].first_area == PRESS_KEY4_AREA)
-        {	// Key4 Area
-            input_report_key(ts->key_input, KEY_SEARCH, 0);
-            TCH_MSG("POS%d Report SEARCH key Up.", i+1);
-        }
-        ts->points[i].num = 0;
-        ts->points[i].first_area = NO_TOUCH;
-        ts->points[i].last_area = NO_TOUCH;
-    }
-    else
-    {	// Finger Down.
-        if (y <= ts->dynamic.TS_MAX_Y)	//Div2-D5-Peripheral-FG-TouchAddNewPhase-00*
-        {	// Touch Area
-            if (ts->points[i].num == 0)
-                ts->points[i].first_area = PRESS_TOUCH_AREA;
-            if (ts->points[i].first_area == PRESS_TOUCH_AREA)
+    {   // Finger Up.
+        if (y >= TS_MAX_Y)
+        {   //Key Area
+            if (ts->points[i].first_area == PRESS_KEY1_AREA)
             {
-                //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*[
+                input_report_key(ts->keyevent_input, KEY_HOME, 0);
+                TCH_MSG("POS%d Report HOME key Up.", i+1);
+            }
+            else if (ts->points[i].first_area == PRESS_KEY2_AREA)
+            {
+                input_report_key(ts->keyevent_input, KEY_MENU, 0);
+                TCH_MSG("POS%d Report MENU key Up.", i+1);
+            }
+            else if (ts->points[i].first_area == PRESS_KEY3_AREA)
+            {
+                input_report_key(ts->keyevent_input, KEY_BACK, 0);
+                TCH_MSG("POS%d Report BACK key Up.", i+1);
+            }
+            else if (ts->points[i].first_area == PRESS_KEY4_AREA)
+            {
+                input_report_key(ts->keyevent_input, KEY_SEARCH, 0);
+                TCH_MSG("POS%d Report SEARCH key Up.", i+1);
+            }
+        }
+        if (ts->points[i].first_area == PRESS_TOUCH_AREA)
+        {   // Report touch pen up event only if first tap in touch area.
+            if (i == 0)
+            {
 #ifdef ATMEL_MXT165_MT
-                input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 255);
+                input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 0);
                 input_report_abs(ts->touch_input, ABS_MT_POSITION_X, x);
                 input_report_abs(ts->touch_input, ABS_MT_POSITION_Y, y);
 #else
                 input_report_abs(ts->touch_input, ABS_X, x);
                 input_report_abs(ts->touch_input, ABS_Y, y);
                 input_report_abs(ts->touch_input, ABS_PRESSURE, pressure);
-                input_report_key(ts->touch_input, BTN_TOUCH, 1);
+                input_report_key(ts->touch_input, BTN_TOUCH, 0);
 #endif
-                //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*]
             }
-            else if (ts->points[i].first_area == PRESS_KEY1_AREA)
-            {	// Flick from home key area to touch area.
-                input_report_key(ts->key_input, KEY_HOME, 0);
+            if (i == 1)
+            {
+#ifdef ATMEL_MXT165_MT
+                input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 0);
+                input_report_abs(ts->touch_input, ABS_MT_POSITION_X, x);
+                input_report_abs(ts->touch_input, ABS_MT_POSITION_Y, y);
+#else
+                input_report_abs(ts->touch_input, ABS_HAT0X, x);
+                input_report_abs(ts->touch_input, ABS_HAT0Y, y);
+                input_report_abs(ts->touch_input, ABS_PRESSURE, pressure);
+                input_report_key(ts->touch_input, BTN_2, 0);
+#endif
+            }
+#ifdef ATMEL_MXT165_MT
+            input_mt_sync(ts->touch_input);
+#endif
+        }
+        ts->points[i].num = 0;
+        ts->points[i].first_area = NO_TOUCH;
+        ts->points[i].last_area = NO_TOUCH;
+    }
+    else
+    {   // Finger Down.
+        if (y < TS_MAX_Y)
+        {   //Touch Area
+            if (ts->points[i].num == 0)
+                ts->points[i].first_area = PRESS_TOUCH_AREA;
+            if (ts->points[i].first_area == PRESS_KEY1_AREA)
+            {   // Flick from home key area to touch area.
+                input_report_key(ts->keyevent_input, KEY_HOME, 0);
                 TCH_MSG("POS%d Report HOME key Up.", i+1);
                 ts->points[i].first_area = NO_TOUCH;
             }
             else if (ts->points[i].first_area == PRESS_KEY2_AREA)
-            {	// Flick from menu key area to touch area.
-                input_report_key(ts->key_input, KEY_MENU, 0);
+            {   // Flick from menu key area to touch area.
+                input_report_key(ts->keyevent_input, KEY_MENU, 0);
                 TCH_MSG("POS%d Report MENU key Up.", i+1);
                 ts->points[i].first_area = NO_TOUCH;
             }
             else if (ts->points[i].first_area == PRESS_KEY3_AREA)
-            {	// Flick from back key area to touch area.
-                input_report_key(ts->key_input, KEY_BACK, 0);
+            {   // Flick from back key area to touch area.
+                input_report_key(ts->keyevent_input, KEY_BACK, 0);
                 TCH_MSG("POS%d Report BACK key Up.", i+1);
                 ts->points[i].first_area = NO_TOUCH;
             }
             else if (ts->points[i].first_area == PRESS_KEY4_AREA)
-            {	// Flick from search key area to touch area.
-                input_report_key(ts->key_input, KEY_SEARCH, 0);
+            {   // Flick from search key area to touch area.
+                input_report_key(ts->keyevent_input, KEY_SEARCH, 0);
                 TCH_MSG("POS%d Report SEARCH key Up.", i+1);
                 ts->points[i].first_area = NO_TOUCH;
+            }
+            else if (ts->points[i].first_area == PRESS_TOUCH_AREA)
+            {
+                if (i == 0)
+                {
+#ifdef ATMEL_MXT165_MT
+                    input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 255);
+                    input_report_abs(ts->touch_input, ABS_MT_POSITION_X, x);
+                    input_report_abs(ts->touch_input, ABS_MT_POSITION_Y, y);
+#else
+                    input_report_abs(ts->touch_input, ABS_X, x);
+                    input_report_abs(ts->touch_input, ABS_Y, y);
+                    input_report_abs(ts->touch_input, ABS_PRESSURE, pressure);
+                    input_report_key(ts->touch_input, BTN_TOUCH, 1);
+#endif
+                }
+                if (i == 1)
+                {
+#ifdef ATMEL_MXT165_MT
+                    input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 255);
+                    input_report_abs(ts->touch_input, ABS_MT_POSITION_X, x);
+                    input_report_abs(ts->touch_input, ABS_MT_POSITION_Y, y);
+#else
+                    input_report_abs(ts->touch_input, ABS_HAT0X, x);
+                    input_report_abs(ts->touch_input, ABS_HAT0Y, y);
+                    input_report_abs(ts->touch_input, ABS_PRESSURE, pressure);
+                    input_report_key(ts->touch_input, BTN_2, 1);
+#endif
+                }
+#ifdef ATMEL_MXT165_MT
+                input_mt_sync(ts->touch_input);
+#endif
             }
             ts->points[i].last_area = PRESS_TOUCH_AREA;
         }
         else
-        {	//Key Area
+        {   //Key Area
             if (x < TS_KEY1_X)
-            {	// Key1 Area
+            {
                 if (ts->points[i].num == 0)
                 {
-                    input_report_key(ts->key_input, KEY_HOME, 1);
+                    input_report_key(ts->keyevent_input, KEY_HOME, 1);
                     TCH_MSG("POS%d Report HOME key Down.", i+1);
                     ts->points[i].first_area = PRESS_KEY1_AREA;
                 }
                 ts->points[i].last_area = PRESS_KEY1_AREA;
             }
             else if (x < TS_KEY2_X)
-            {	// Key2 Area
+            {
                 if (ts->points[i].num == 0)
                 {
-                    input_report_key(ts->key_input, KEY_MENU, 1);
+                    input_report_key(ts->keyevent_input, KEY_MENU, 1);
                     TCH_MSG("POS%d Report MENU key Down.", i+1);
                     ts->points[i].first_area = PRESS_KEY2_AREA;
                 }
                 ts->points[i].last_area = PRESS_KEY2_AREA;
             }
             else if (x < TS_KEY3_X)
-            {	// Key3 Area
+            {
                 if (ts->points[i].num == 0)
                 {
-                    input_report_key(ts->key_input, KEY_BACK, 1);
+                    input_report_key(ts->keyevent_input, KEY_BACK, 1);
                     TCH_MSG("POS%d Report BACK key Down.", i+1);
                     ts->points[i].first_area = PRESS_KEY3_AREA;
                 }
                 ts->points[i].last_area = PRESS_KEY3_AREA;
             }
             else
-            {	// Key4 Area
+            {
                 if (ts->points[i].num == 0)
                 {
-                    input_report_key(ts->key_input, KEY_SEARCH, 1);
+                    input_report_key(ts->keyevent_input, KEY_SEARCH, 1);
                     TCH_MSG("POS%d Report SEARCH key Down.", i+1);
                     ts->points[i].first_area = PRESS_KEY4_AREA;
                 }
@@ -674,320 +644,196 @@ static void atmel_mxt165_report(struct atmel_mxt165_info *ts, int i, int x, int 
         }
         ts->points[i].num++;
     }
-    //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*[
-#ifdef ATMEL_MXT165_MT
-    input_mt_sync(ts->touch_input);
-#else
-    input_sync(ts->touch_input);
-#endif
-    //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*]
-}
-
-//Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*[
-static void atmel_mxt165_report_up(struct atmel_mxt165_info *ts, uint8_t *data)
-{
-    int i;
-
-    for (i=0; i<TS_MAX_POINTS; i++)
-    {
-        if (ts->points[i].last_area > NO_TOUCH)
-        {
-            atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, NO_TOUCH);
-            TCH_MSG("POS%d Up, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-        }
-    }
-#ifdef ATMEL_MXT165_MT
-    input_sync(ts->touch_input);
-#endif
-}
-//Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*]
-
-static void atmel_mxt165_process_none(struct atmel_mxt165_info *ts, uint8_t *data)
-{
-    int i;
-
-    TCH_DBG(DB_LEVEL1, "Get other report ID = %d", g_ReportID[data[0]]);
-    for (i=0; i<8; i++)
-        TCH_DBG(DB_LEVEL1, "Report T%d[%d] = %d", g_ReportID[data[0]], i ,data[i]);
-
-    TCH_DBG(DB_LEVEL1, "Done.");
-}
-
-static void atmel_mxt165_process_T6(struct atmel_mxt165_info *ts, uint8_t *data)
-{
-    if (data[1] & 0x04)
-        TCH_ERR("I2C-Compatible Checksum Errors.");
-    if (data[1] & 0x08)
-        TCH_ERR("Configuration Errors.");
-    if (data[1] & 0x10)
-    {
-        TCH_MSG("Calibrating.");
-        atmel_mxt165_report_up(ts, data);	//Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*
-    }
-    if (data[1] & 0x20)
-        TCH_ERR("Signal Errors.");
-    if (data[1] & 0x40)
-        TCH_ERR("Overflow Errors.");
-    if (data[1] & 0x80)
-    {
-        TCH_MSG("Reseting.");
-        //Div2-D5-Peripheral-FG-TouchAddErrorHandle-00+[
-        MXT_InitConfig();
-        TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
-        TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
-        //Div2-D5-Peripheral-FG-TouchAddErrorHandle-00+]
-    }
-    if (data[1] & 0x04 || ((data[1] & 0x10) && !gpio_get_value(GPIO_TP_INT_N)) || data[1] & 0x20)
-    {
-        TCH_MSG("Prepare to reset touch IC. Please wait a moment...");
-        atmel_mxt165_reset();
-        MXT_GetConfigStatus();
-        MXT_InitConfig();
-        TCH_MSG("Finish to reset touch IC.");
-        TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
-        TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
-    }
-}
-
-static void atmel_mxt165_process_T9(struct atmel_mxt165_info *ts, uint8_t *data)
-{
-    int first_touch_id = ts->first_finger_id;	//Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*
-    int i, id = (data[0] - first_touch_id);
-
-    if (id < TS_MAX_POINTS)
-    {
-        ts->points[id].x = (data[2] << 2) | (data[4] >> 6);
-        ts->points[id].y = (data[3] << 2) | ((data[4] >> 2) & 0x03);
-
-        if (data[1] & 0xC0)
-        {	// Finger Down.
-            //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*[
-            for (i=0; i<TS_MAX_POINTS; i++)
-            {
-                if (ts->points[i].last_area > NO_TOUCH || i == id)
-                {
-                    atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, 255);
-                    if (ts->points[i].num == 1)
-                        TCH_DBG(DB_LEVEL0, "POS%d Down %d, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, ts->points[i].num, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                    else
-                        TCH_DBG(DB_LEVEL1, "POS%d Down %d, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, ts->points[i].num, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                }
-            }
-#ifdef ATMEL_MXT165_MT
-            input_sync(ts->touch_input);
-#endif
-            //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*]
-        }
-        else if ((data[1] & 0x20) == 0x20)
-        {	// Finger Up.
-            //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*[
-            for (i=0; i<TS_MAX_POINTS; i++)
-            {
-                if (ts->points[i].last_area > NO_TOUCH)
-                {
-                    if (i == id)
-                    {
-                        atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, NO_TOUCH);
-                        TCH_MSG("POS%d Up, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                    }
-                    else
-                    {
-                        atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, 255);
-                        if (ts->points[i].num == 1)
-                            TCH_DBG(DB_LEVEL0, "POS%d Down %d, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, ts->points[i].num, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                        else
-                            TCH_DBG(DB_LEVEL1, "POS%d Down %d, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, ts->points[i].num, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                    }
-                }
-            }
-#ifdef ATMEL_MXT165_MT
-            input_sync(ts->touch_input);
-#endif
-            for (i=0; i<TS_MAX_POINTS; i++)
-            {
-                if (ts->points[i].last_area > NO_TOUCH)
-                {
-                    atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, 255);
-                    if (ts->points[i].num == 1)
-                        TCH_DBG(DB_LEVEL0, "POS%d Down %d, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, ts->points[i].num, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                    else
-                        TCH_DBG(DB_LEVEL1, "POS%d Down %d, Status = 0x%x, X = %3d, Y = %3d, ID = %d", i+1, ts->points[i].num, data[1], ts->points[i].x, ts->points[i].y, g_ReportID[data[0]]);
-                }
-            }
-#ifdef ATMEL_MXT165_MT
-            input_sync(ts->touch_input);
-#endif
-            //Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*]
-        }
-    }
-}
-
-static void atmel_mxt165_process_T15(struct atmel_mxt165_info *ts, uint8_t *data)
-{
-    // Key1
-    if (data[2] & 0x01)
-    {
-        if (!ts->key_state[0])
-        {
-            input_report_key(ts->key_input, KEY_HOME, 1);
-            TCH_MSG("Report HOME key Down.");
-            ts->key_state[0] = TRUE;
-        }
-    }
-    else
-    {
-        if (ts->key_state[0])
-        {
-            input_report_key(ts->key_input, KEY_HOME, 0);
-            TCH_MSG("Report HOME key Up.");
-            ts->key_state[0] = FALSE;
-        }
-    }
-    // Key2
-    if (data[2] & 0x02)
-    {
-        if (!ts->key_state[1])
-        {
-            input_report_key(ts->key_input, KEY_MENU, 1);
-            TCH_MSG("Report MENU key Down.");
-            ts->key_state[1] = TRUE;
-        }
-    }
-    else
-    {
-        if (ts->key_state[1])
-        {
-            input_report_key(ts->key_input, KEY_MENU, 0);
-            TCH_MSG("Report MENU key Up.");
-            ts->key_state[1] = FALSE;
-        }
-    }
-    // Key3
-    if (data[2] & 0x04)
-    {
-        if (!ts->key_state[2])
-        {
-            input_report_key(ts->key_input, KEY_BACK, 1);
-            TCH_MSG("Report BACK key Down.");
-            ts->key_state[2] = TRUE;
-        }
-    }
-    else
-    {
-        if (ts->key_state[2])
-        {
-            input_report_key(ts->key_input, KEY_BACK, 0);
-            TCH_MSG("Report BACK key Up.");
-            ts->key_state[2] = FALSE;
-        }
-    }
-    // Key4
-    if (data[2] & 0x08)
-    {
-        if (!ts->key_state[3])
-        {
-            input_report_key(ts->key_input, KEY_SEARCH, 1);
-            TCH_MSG("Report SEARCH key Down.");
-            ts->key_state[3] = TRUE;
-        }
-    }
-    else
-    {
-        if (ts->key_state[3])
-        {
-            input_report_key(ts->key_input, KEY_SEARCH, 0);
-            TCH_MSG("Report SEARCH key Up.");
-            ts->key_state[3] = FALSE;
-        }
-    }
-}
-
-static void atmel_mxt165_process_T20(struct atmel_mxt165_info *ts, uint8_t *data)
-{
-    if (data[1] & 0x01)
-    {
-        TCH_MSG("Face Down, Status = 0x%x, ID = %d", data[1], g_ReportID[data[0]]);
-        ts->fake_proximity = TRUE;
-    }
-    else if (ts->fake_proximity)
-    {
-        TCH_MSG("Face Up, Status = 0x%x, ID = %d", data[1], g_ReportID[data[0]]);
-        ts->fake_proximity = FALSE;
-        atmel_mxt165_report_up(ts, data);	//Div2-D5-Peripheral-FG-TouchAddto5Multitouch-00*
-    }
+    //input_sync(ts->touch_input);
 }
 
 static void atmel_mxt165_isr_workqueue(struct work_struct *work)
 {
-    struct atmel_mxt165_info *ts = container_of(work, struct atmel_mxt165_info, work_queue);
+    struct atmel_mxt165_info *ts = container_of(work, struct atmel_mxt165_info, wqueue);
+
+    uint16_t Buf_X;
+    uint16_t Buf_Y;
     uint8_t count = 3, MSG_TYPE = 0;
+    int i,first_touch_id = atmel_mxt165->first_finger_id;
 
     g_I2CAddress = g_RegAddr[GEN_MESSAGEPROCESSOR_T5];
 
-    // If read/write I2C data faield, re-action 3 times.
-    while (read_mem(g_I2CAddress , 8, (void *) g_MsgData ) != 0)
+    while (!ts->suspend_state)	// Read data until chip queue no data.
     {
-        TCH_ERR("Read data failed, Re-read.");
-        mdelay(3);
-
-        count--;
-        if (count == 0)
+        // If read/write I2C data faield, re-action 3 times.
+        while (read_mem(g_I2CAddress , 8, (void *) g_MsgData ) != 0)
         {
-            TCH_MSG("Can't Read/write data, reset chip.");
-            TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
-            TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
-            atmel_mxt165_reset();  // Re-try 3 times, can't read/write data, reset atmel_mxt165 chip
-            MXT_GetConfigStatus();
-            MXT_InitConfig();
-            return ;
-        }
-    }
+            TCH_ERR("Read data failed, Re-read.");
+            mdelay(3);
 
-    MSG_TYPE = g_ReportID[g_MsgData[0]];
-    switch (MSG_TYPE)
-    {
-        case GEN_COMMANDPROCESSOR_T6:
-            atmel_mxt165_process_T6(ts, g_MsgData);
+            count--;
+            if (count == 0)
+            {
+                TCH_MSG("Can't Read/write data, reset chip.");
+                TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
+                TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
+                atmel_mxt165_reset();  // Re-try 3 times, can't read/write data, reset atmel_mxt165 chip
+                MXT_GetConfigStatus();
+                MXT_InitConfig();
+                return ;
+            }
+        }
+
+        MSG_TYPE = g_ReportID[g_MsgData[0]];
+        if ((MSG_TYPE == 0xFF) || (MSG_TYPE == 0x00))   // No data, return
+        {
+            TCH_DBG(DB_LEVEL2, "No data, Leave ISR.");
+            TCH_DBG(DB_LEVEL2, "GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
+            TCH_DBG(DB_LEVEL2, "GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
             break;
-        case TOUCH_MULTITOUCHSCREEN_T9:
-            atmel_mxt165_process_T9(ts, g_MsgData);
-            break;
-        case TOUCH_KEYARRAY_T15:
-            atmel_mxt165_process_T15(ts, g_MsgData);
-            break;
-        case PROCI_GRIPFACESUPPRESSION_T20:
-            atmel_mxt165_process_T20(ts, g_MsgData);
-            break;
-        //case GEN_COMMANDPROCESSOR_T6:
-        case GEN_POWERCONFIG_T7:
-        case GEN_ACQUISITIONCONFIG_T8:
-        //case TOUCH_MULTITOUCHSCREEN_T9:
-        case TOUCH_SINGLETOUCHSCREEN_T10:
-        case TOUCH_XSLIDER_T11:
-        case TOUCH_YSLIDER_T12:
-        case TOUCH_XWHEEL_T13:
-        case TOUCH_YWHEEL_T14:
-        //case TOUCH_KEYARRAY_T15:
-        case PROCG_SIGNALFILTER_T16:
-        case PROCI_LINEARIZATIONTABLE_T17:
-        case SPT_COMCONFIG_T18:
-        case SPT_GPIOPWM_T19:
-        //case PROCI_GRIPFACESUPPRESSION_T20:
-        case RESERVED_T21:
-        case PROCG_NOISESUPPRESSION_T22:
-        case TOUCH_PROXIMITY_T23:
-        case PROCI_ONETOUCHGESTUREPROCESSOR_T24:
-        case SPT_SELFTEST_T25:
-        case DEBUG_CTERANGE_T26:
-        case PROCI_TWOTOUCHGESTUREPROCESSOR_T27:
-        case SPT_CTECONFIG_T28:
-        case SPT_GPI_T29:
-        case SPT_GATE_T30:
-        case TOUCH_KEYSET_T31:
-        case TOUCH_XSLIDERSET_T32:
-        default:
-            atmel_mxt165_process_none(ts, g_MsgData);
-            break;
+        }
+        else if (MSG_TYPE == GEN_COMMANDPROCESSOR_T6)
+        {
+            if (g_MsgData[1] & 0x04)
+                TCH_ERR("I2C-Compatible Checksum Errors.");
+            if (g_MsgData[1] & 0x08)
+                TCH_ERR("Configuration Errors.");
+            if (g_MsgData[1] & 0x10)
+                TCH_MSG("Calibrating.");
+            if (g_MsgData[1] & 0x20)
+                TCH_ERR("Signal Errors.");
+            if (g_MsgData[1] & 0x40)
+                TCH_ERR("Overflow Errors.");
+            if (g_MsgData[1] & 0x80)
+                TCH_MSG("Reseting.");
+            if (g_MsgData[1] & 0x04 || ((g_MsgData[1] & 0x10) && !gpio_get_value(GPIO_TP_INT_N)) || g_MsgData[1] & 0x20)
+            {
+                TCH_MSG("Prepare to reset touch IC. Please wait a moment...");
+                atmel_mxt165_reset();
+                MXT_GetConfigStatus();
+                MXT_InitConfig();
+                TCH_MSG("Finish to reset touch IC.");
+                TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
+                TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
+                return ;
+            }
+        }
+        else if ((MSG_TYPE == PROCI_GRIPFACESUPPRESSION_T20))
+        {
+            if (g_MsgData[1] & 0x01)
+            {
+                TCH_MSG("Face Down, Status = 0x%x, ID = %d", g_MsgData[1], MSG_TYPE);
+                ts->facedetect = TRUE;
+                continue;
+            }
+            else if (ts->facedetect)
+            {
+                TCH_MSG("Face Up, Status = 0x%x, ID = %d", g_MsgData[1], MSG_TYPE);
+                ts->facedetect = FALSE;
+                for (i=0; i<TS_MAX_POINTS; i++)
+                {
+                    if (ts->points[i].last_area > NO_TOUCH)
+                    {   // Report a touch pen up event when touch detects finger down events in face detection(Face Up).
+                        atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, NO_TOUCH);
+                        TCH_MSG("POS%d Up, Status = 0x%x, X = %d, Y = %d, ID = %d", i+1, g_MsgData[1], ts->points[i].x, ts->points[i].y, MSG_TYPE);
+                        input_sync(ts->touch_input);
+                    }
+                }
+            }
+        }
+        else if (MSG_TYPE != TOUCH_MULTITOUCHSCREEN_T9)
+        {
+            TCH_DBG(DB_LEVEL1, "Get other report id = %d", MSG_TYPE);
+            for (i=0; i<8; i++)
+                TCH_DBG(DB_LEVEL1, "Report T%d[%d] = %d", MSG_TYPE, i ,g_MsgData[i]);
+            continue;
+        }
+
+        Buf_X = (g_MsgData[2] << 2) | (g_MsgData[4] >> 6);
+        Buf_Y = (g_MsgData[3] << 2) | ((g_MsgData[4] >> 2) & 0x03);
+
+        for (i=0; i<TS_MAX_POINTS; i++)
+        {
+            if (g_MsgData[0] == first_touch_id + i)
+            {
+                ts->points[i].x = Buf_X;
+                ts->points[i].y = Buf_Y;
+
+                if (g_MsgData[1] & 0xC0)
+                {	// Finger Down.
+                    if (i == 0)
+                    {	// POS1
+                        atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, 255);
+                        TCH_DBG(DB_LEVEL1, "POS%d Down %d, Status = 0x%x, X = %d, Y = %d, ID = %d", g_MsgData[0]-1, ts->points[i].num, g_MsgData[1], Buf_X, Buf_Y, MSG_TYPE);
+#ifdef ATMEL_MXT165_MT
+                        if (ts->points[i+1].last_area > NO_TOUCH)
+                        {
+                            atmel_mxt165_report(ts, i+1, ts->points[i+1].x, ts->points[i+1].y, 255);
+                            TCH_DBG(DB_LEVEL1, "POS2 Down %d, X = %d, Y = %d", ts->points[i+1].num, ts->points[i+1].x, ts->points[i+1].y);
+                        }
+#endif
+                        input_sync(ts->touch_input);
+                    }
+                    else if (i == 1)
+                    {	// POS2
+#ifdef ATMEL_MXT165_MT
+                        if (ts->points[i-1].last_area > NO_TOUCH)
+                        {
+                            atmel_mxt165_report(ts, i-1, ts->points[i-1].x, ts->points[i-1].y, 255);
+                            TCH_DBG(DB_LEVEL1, "POS1 Down %d, X = %d, Y = %d", ts->points[i-1].num, ts->points[i-1].x, ts->points[i-1].y);
+                        }
+#endif
+                        atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, 255);
+                        TCH_DBG(DB_LEVEL1, "POS%d Down %d, Status = 0x%x, X = %d, Y = %d, ID = %d", g_MsgData[0]-1, ts->points[i].num, g_MsgData[1], Buf_X, Buf_Y, MSG_TYPE);
+                        input_sync(ts->touch_input);
+                    }
+                    //input_sync(ts->touch_input);
+                }
+                else if ((g_MsgData[1] & 0x20) == 0x20)
+                {	// Finger Up.
+                    if (ts->points[i].last_area > NO_TOUCH)
+                    {
+                        if (i == 0)
+                        {	// POS1
+                            atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, NO_TOUCH);
+                            TCH_MSG("POS%d Up, Status = 0x%x, X = %d, Y = %d, ID = %d", g_MsgData[0]-1, g_MsgData[1], Buf_X, Buf_Y, MSG_TYPE);
+#ifdef ATMEL_MXT165_MT
+                            if (ts->points[i+1].last_area > NO_TOUCH)
+                            {
+                                atmel_mxt165_report(ts, i+1, ts->points[i+1].x, ts->points[i+1].y, 255);
+                                TCH_DBG(DB_LEVEL1, "POS2 Down %d, X = %d, Y = %d", ts->points[i+1].num, ts->points[i+1].x, ts->points[i+1].y);
+                            }
+#endif
+                            input_sync(ts->touch_input);
+#ifdef ATMEL_MXT165_MT
+                            if (ts->points[i+1].last_area > NO_TOUCH)
+                            {
+                                atmel_mxt165_report(ts, i+1, ts->points[i+1].x, ts->points[i+1].y, 255);
+                                TCH_DBG(DB_LEVEL1, "POS2 Down %d, X = %d, Y = %d", ts->points[i+1].num, ts->points[i+1].x, ts->points[i+1].y);
+                            }
+#endif
+                        }
+                        else if (i == 1)
+                        {	// POS2
+#ifdef ATMEL_MXT165_MT
+                            if (ts->points[i-1].last_area > NO_TOUCH)
+                            {
+                                atmel_mxt165_report(ts, i-1, ts->points[i-1].x, ts->points[i-1].y, 255);
+                                TCH_DBG(DB_LEVEL1, "POS1 Down %d, X = %d, Y = %d", ts->points[i-1].num, ts->points[i-1].x, ts->points[i-1].y);
+                            }
+#endif
+                            atmel_mxt165_report(ts, i, ts->points[i].x, ts->points[i].y, NO_TOUCH);
+                            TCH_MSG("POS%d Up, Status = 0x%x, X = %d, Y = %d, ID = %d", g_MsgData[0]-1, g_MsgData[1], Buf_X, Buf_Y, MSG_TYPE);
+                            input_sync(ts->touch_input);
+#ifdef ATMEL_MXT165_MT
+                            if (ts->points[i-1].last_area > NO_TOUCH)
+                            {
+                                atmel_mxt165_report(ts, i-1, ts->points[i-1].x, ts->points[i-1].y, 255);
+                                TCH_DBG(DB_LEVEL1, "POS1 Down %d, X = %d, Y = %d", ts->points[i-1].num, ts->points[i-1].x, ts->points[i-1].y);
+                            }
+#endif
+                        }
+                        input_sync(ts->touch_input);
+                    }
+                }
+            }
+        }
+
     }
 
 }
@@ -997,27 +843,99 @@ static irqreturn_t atmel_mxt165_isr(int irq, void * handle)
     struct atmel_mxt165_info *ts = handle;
 
     if (!ts->suspend_state)
-        schedule_work(&ts->work_queue);
+        schedule_work(&ts->wqueue);
 
     return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+void atmel_mxt165_early_suspend(struct early_suspend *h)
+{
+    uint16_t power_cfg_address = 0;
+    uint8_t data[3];
+    uint8_t rc = 0;
+
+    //cancel_work_sync(&atmel_mxt165->wqueue);
+    power_cfg_address = g_RegAddr[GEN_POWERCONFIG_T7];
+    read_mem(power_cfg_address, 3, (void *) atmel_mxt165->T7);
+
+    data[0] = 0;
+    data[1] = 0;
+    data[2] = 0;
+
+    //MXT_GetConfigStatus();  // Clear all data, avoid intrrupt no resume.
+
+    rc = write_mem(power_cfg_address, 3, (void *) data);
+    if (rc != 0)
+        TCH_ERR("Driver can't enter deep sleep mode [%d].", rc);
+    else
+        TCH_MSG("Enter deep sleep mode.");
+
+    disable_irq(atmel_mxt165->irq);
+    atmel_mxt165->suspend_state = TRUE;
+    //gpio_tlmm_config(GPIO_CFG(GPIO_TP_INT_N, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+    gpio_tlmm_config(GPIO_CFG(GPIO_TP_RST_N, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+    gpio_set_value(GPIO_TP_RST_N, HIGH);
+
+    TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
+    TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
+    TCH_DBG(DB_LEVEL1, "Done.");
+}
+
+void atmel_mxt165_late_resume(struct early_suspend *h)
+{
+    uint16_t power_cfg_address = 0;
+    uint8_t i, rc = 0;
+
+    power_cfg_address = g_RegAddr[GEN_POWERCONFIG_T7];
+    //gpio_tlmm_config(GPIO_CFG(GPIO_TP_INT_N, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+    gpio_tlmm_config(GPIO_CFG(GPIO_TP_RST_N, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+    gpio_set_value(GPIO_TP_RST_N, HIGH);
+    atmel_mxt165->suspend_state = FALSE;
+    enable_irq(atmel_mxt165->irq);
+
+    for (i=0; i<TS_MAX_POINTS; i++)
+    {
+        if (atmel_mxt165->points[i].last_area > NO_TOUCH)
+            {
+                TCH_MSG("POS%d Up, X = %d, Y = %d", i+1, atmel_mxt165->points[i].x, atmel_mxt165->points[i].y);
+                atmel_mxt165_report(atmel_mxt165, i, atmel_mxt165->points[i].x, atmel_mxt165->points[i].y, NO_TOUCH);
+                input_sync(atmel_mxt165->touch_input);
+            }
+    }
+    rc = write_mem(power_cfg_address, 3, (void *) atmel_mxt165->T7);
+    if (rc != 0)
+        TCH_ERR("Driver can't return from deep sleep mode [%d].", rc);
+    else
+        TCH_MSG("Return from sleep mode.");
+
+    //atmel_mxt165_reset();
+    MXT_GetConfigStatus();
+    //MXT_InitConfig();
+    MXT_Calibrate();
+
+    TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
+    TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
+    TCH_DBG(DB_LEVEL1, "Done.");
+}
+#endif
+
 static int atmel_mxt165_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
     struct input_dev *touch_input;
-    struct input_dev *key_input;
+    struct input_dev *keyevent_input;
     struct vreg *device_vreg;
     int i, ret = 0;
 
-    // Check I2C
+    // I2C Check
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
     {
         TCH_ERR("Check I2C functionality failed.");
-        ret = -EIO;
+        ret = -ENODEV;
         goto err_check_functionality_failed;
     }
 
-    // Allocate Kernel Memory
+    // Allocate Memory
     atmel_mxt165 = kzalloc(sizeof(struct atmel_mxt165_info), GFP_KERNEL);
     if (atmel_mxt165 == NULL)
     {
@@ -1033,31 +951,26 @@ static int atmel_mxt165_probe(struct i2c_client *client, const struct i2c_device
         goto err_alloc_info_block_failed;
     }
 
-    // Power On
+    // Power ON
     device_vreg = vreg_get(0, TOUCH_DEVICE_VREG);
     if (!device_vreg) {
-        TCH_ERR("Get vreg(%s) failed.", TOUCH_DEVICE_VREG);
+        TCH_ERR("Get vreg failed.");
         ret = -EIO;
         goto err_power_failed;
     }
     vreg_set_level(device_vreg, 3000);
-    TCH_DBG(DB_LEVEL0, "Power status = %d", vreg_enable(device_vreg));
+    TCH_DBG(0, "Power status = %d", vreg_enable(device_vreg));
 
-    // Request and Config GPIO
-    if (gpio_request(GPIO_TP_INT_N, "TP_INT_N"))
-        TCH_ERR("Request GPIO %d failed.", GPIO_TP_INT_N);
-    if (gpio_request(GPIO_TP_RST_N, "TP_RST_N"))
-        TCH_ERR("Request GPIO %d failed.", GPIO_TP_RST_N);
+    // Config GPIO
     gpio_tlmm_config(GPIO_CFG(GPIO_TP_INT_N, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
     gpio_tlmm_config(GPIO_CFG(GPIO_TP_RST_N, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
     gpio_set_value(GPIO_TP_RST_N, HIGH);
     atmel_mxt165_reset();
 
-    // Check Touch IC
+    // Confirm Touch Chip
     atmel_mxt165->client = client;
     i2c_set_clientdata(client, atmel_mxt165);
     atmel_mxt165->client->addr = TOUCH_DEVICE_I2C_ADDRESS;
-    atmel_mxt165_dynamicalloc();	//Div2-D5-Peripheral-FG-TouchAddNewPhase-00+
     for (i=0; i<5; i++)
     {
         if (atmel_mxt165_check(atmel_mxt165->client->addr) == DRIVER_SETUP_INCOMPLETE)
@@ -1076,8 +989,8 @@ static int atmel_mxt165_probe(struct i2c_client *client, const struct i2c_device
         ret = -ENODEV;
         goto err_touch_input_dev_alloc_failed;
     }
-    key_input = input_allocate_device();
-    if (key_input == NULL)
+    keyevent_input = input_allocate_device();
+    if (keyevent_input == NULL)
     {
         TCH_ERR("Allocate key input device failed.");
         ret = -ENODEV;
@@ -1093,23 +1006,23 @@ static int atmel_mxt165_probe(struct i2c_client *client, const struct i2c_device
     set_bit(BTN_TOUCH, touch_input->keybit);
     set_bit(BTN_2, touch_input->keybit);
     input_set_abs_params(touch_input, ABS_X, TS_MIN_X, TS_MAX_X, 0, 0);
-    input_set_abs_params(touch_input, ABS_Y, TS_MIN_Y, atmel_mxt165->dynamic.TS_MAX_Y, 0, 0);	//Div2-D5-Peripheral-FG-TouchAddNewPhase-00*
+    input_set_abs_params(touch_input, ABS_Y, TS_MIN_Y, TS_MAX_Y, 0, 0);
     input_set_abs_params(touch_input, ABS_HAT0X, TS_MIN_X, TS_MAX_X, 0, 0);
-    input_set_abs_params(touch_input, ABS_HAT0Y, TS_MIN_Y, atmel_mxt165->dynamic.TS_MAX_Y, 0, 0);	//Div2-D5-Peripheral-FG-TouchAddNewPhase-00*
+    input_set_abs_params(touch_input, ABS_HAT0Y, TS_MIN_Y, TS_MAX_Y, 0, 0);
     input_set_abs_params(touch_input, ABS_PRESSURE, 0, 255, 0, 0);
 #else
     input_set_abs_params(touch_input, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
     input_set_abs_params(touch_input, ABS_MT_POSITION_X, TS_MIN_X, TS_MAX_X, 0, 0);
-    input_set_abs_params(touch_input, ABS_MT_POSITION_Y, TS_MIN_Y, atmel_mxt165->dynamic.TS_MAX_Y, 0, 0);	//Div2-D5-Peripheral-FG-TouchAddNewPhase-00*
+    input_set_abs_params(touch_input, ABS_MT_POSITION_Y, TS_MIN_Y, TS_MAX_Y, 0, 0);
 #endif
 
-    key_input->name  = "atmel_mxt165_key";
-    key_input->phys  = "atmel_mxt165/input1";
-    set_bit(EV_KEY, key_input->evbit);
-    set_bit(KEY_HOME, key_input->keybit);
-    set_bit(KEY_MENU, key_input->keybit);
-    set_bit(KEY_BACK, key_input->keybit);
-    set_bit(KEY_SEARCH, key_input->keybit);
+    keyevent_input->name  = "atmel_mxt165_key";
+    keyevent_input->phys  = "atmel_mxt165/input1";
+    set_bit(EV_KEY, keyevent_input->evbit);
+    set_bit(KEY_HOME, keyevent_input->keybit);
+    set_bit(KEY_MENU, keyevent_input->keybit);
+    set_bit(KEY_BACK, keyevent_input->keybit);
+    set_bit(KEY_SEARCH, keyevent_input->keybit);
 
     // Register Input Device
     atmel_mxt165->touch_input = touch_input;
@@ -1119,8 +1032,8 @@ static int atmel_mxt165_probe(struct i2c_client *client, const struct i2c_device
         ret = -ENODEV;
         goto err_touch_input_register_device_failed;
     }
-    atmel_mxt165->key_input = key_input;
-    if (input_register_device(atmel_mxt165->key_input))
+    atmel_mxt165->keyevent_input = keyevent_input;
+    if (input_register_device(atmel_mxt165->keyevent_input))
     {
         TCH_ERR("Register key input device failed.");
         ret = -ENODEV;
@@ -1128,44 +1041,44 @@ static int atmel_mxt165_probe(struct i2c_client *client, const struct i2c_device
     }
 
     // Init Work Queue and Register IRQ
-    INIT_WORK(&atmel_mxt165->work_queue, atmel_mxt165_isr_workqueue);
-    atmel_mxt165->client->irq = MSM_GPIO_TO_INT(GPIO_TP_INT_N);
-    if (request_irq(atmel_mxt165->client->irq, atmel_mxt165_isr, IRQF_TRIGGER_FALLING, client->dev.driver->name, atmel_mxt165))
+    INIT_WORK(&atmel_mxt165->wqueue, atmel_mxt165_isr_workqueue);
+    atmel_mxt165->irq = MSM_GPIO_TO_INT(GPIO_TP_INT_N);
+    if (request_irq(atmel_mxt165->irq, atmel_mxt165_isr, IRQF_TRIGGER_FALLING, client->dev.driver->name, atmel_mxt165))
     {
         TCH_ERR("Request IRQ failed.");
         ret = -EBUSY;
         goto err_request_irq_failed;
     }
 
-    // Register early_suspend
-#ifdef CONFIG_HAS_EARLYSUSPEND
-    atmel_mxt165->early_suspended.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 1;
-    atmel_mxt165->early_suspended.suspend = atmel_mxt165_early_suspend;
-    atmel_mxt165->early_suspended.resume = atmel_mxt165_late_resume;
-    register_early_suspend(&atmel_mxt165->early_suspended);
-#endif
-
     memset(atmel_mxt165->points, 0, sizeof(struct point_info));
-    atmel_mxt165->fake_proximity = FALSE;
     atmel_mxt165->suspend_state = FALSE;
+    atmel_mxt165->facedetect = FALSE;
     atmel_mxt165->T7[0] = 32;
-    atmel_mxt165->T7[1] = 12;
+    atmel_mxt165->T7[1] = 10;
     atmel_mxt165->T7[2] = 50;
-    if (gpio_get_value(GPIO_TP_INT_N) == LOW)
-        atmel_mxt165_isr_workqueue(&atmel_mxt165->work_queue);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+    // Register early_suspend
+    atmel_mxt165->es.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+    atmel_mxt165->es.suspend = atmel_mxt165_early_suspend;
+    atmel_mxt165->es.resume = atmel_mxt165_late_resume;
 
-    TCH_DBG(DB_LEVEL0, "Done.");
+    register_early_suspend(&atmel_mxt165->es);
+#endif
+    if (gpio_get_value(GPIO_TP_INT_N) == LOW)
+        atmel_mxt165_isr_workqueue(&atmel_mxt165->wqueue);
+
+    TCH_DBG(0, "Done.");
     return 0;
 
-    free_irq(atmel_mxt165->client->irq, atmel_mxt165);
+    free_irq(atmel_mxt165->irq, atmel_mxt165);
 err_request_irq_failed:
-    cancel_work_sync(&atmel_mxt165->work_queue);
-    kfree(&atmel_mxt165->work_queue);
-    input_unregister_device(atmel_mxt165->key_input);
+    cancel_work_sync(&atmel_mxt165->wqueue);
+    kfree(&atmel_mxt165->wqueue);
+    input_unregister_device(atmel_mxt165->keyevent_input);
 err_key_input_register_device_failed:
     input_unregister_device(atmel_mxt165->touch_input);
 err_touch_input_register_device_failed:
-    input_free_device(key_input);
+    input_free_device(keyevent_input);
 err_key_input_dev_alloc_failed:
     input_free_device(touch_input);
 err_touch_input_dev_alloc_failed:
@@ -1184,22 +1097,22 @@ err_check_functionality_failed:
 
 static int atmel_mxt165_remove(struct i2c_client * client)
 {
-    free_irq(atmel_mxt165->client->irq, atmel_mxt165);
+    free_irq(atmel_mxt165->irq, atmel_mxt165);
 
-    cancel_work_sync(&atmel_mxt165->work_queue);
-    kfree(&atmel_mxt165->work_queue);
+    cancel_work_sync(&atmel_mxt165->wqueue);
+    kfree(&atmel_mxt165->wqueue);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&atmel_mxt165->early_suspended);
+    unregister_early_suspend(&atmel_mxt165->es);
 #endif
 
     input_unregister_device(atmel_mxt165->touch_input);
-    input_unregister_device(atmel_mxt165->key_input);
+    input_unregister_device(atmel_mxt165->keyevent_input);
 
     kfree(atmel_mxt165->touch_input);
-    kfree(atmel_mxt165->key_input);
+    kfree(atmel_mxt165->keyevent_input);
     input_free_device(atmel_mxt165->touch_input);
-    input_free_device(atmel_mxt165->key_input);
+    input_free_device(atmel_mxt165->keyevent_input);
 
     kfree(atmel_mxt165);
     kfree(info_block->info_id);
@@ -1210,105 +1123,17 @@ static int atmel_mxt165_remove(struct i2c_client * client)
     return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-void atmel_mxt165_early_suspend(struct early_suspend *h)
-{
-    struct atmel_mxt165_info *ts = container_of(h, struct atmel_mxt165_info, early_suspended);
-    uint16_t power_cfg_address = 0;
-    uint8_t data[3];
-    uint8_t rc = 0;
-
-    //cancel_work_sync(&ts->work_queue);
-    power_cfg_address = g_RegAddr[GEN_POWERCONFIG_T7];
-    read_mem(power_cfg_address, 3, (void *) ts->T7);
-
-    data[0] = 0;
-    data[1] = 0;
-    data[2] = 0;
-
-    //MXT_GetConfigStatus();	// Clear all data, avoid intrrupt no resume.
-
-    rc = write_mem(power_cfg_address, 3, (void *) data);
-    if (rc != 0)
-        TCH_ERR("Driver can't enter deep sleep mode [%d].", rc);
-    else
-        TCH_MSG("Enter deep sleep mode.");
-
-    disable_irq(ts->client->irq);
-    ts->suspend_state = TRUE;
-    //gpio_tlmm_config(GPIO_CFG(GPIO_TP_INT_N, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    gpio_tlmm_config(GPIO_CFG(GPIO_TP_RST_N, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    gpio_set_value(GPIO_TP_RST_N, HIGH);
-
-    TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
-    TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
-    TCH_DBG(DB_LEVEL1, "Done.");
-}
-
-void atmel_mxt165_late_resume(struct early_suspend *h)
-{
-    struct atmel_mxt165_info *ts = container_of(h, struct atmel_mxt165_info, early_suspended);
-    uint16_t power_cfg_address = 0;
-    uint8_t rc = 0;
-
-    power_cfg_address = g_RegAddr[GEN_POWERCONFIG_T7];
-    //gpio_tlmm_config(GPIO_CFG(GPIO_TP_INT_N, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    gpio_tlmm_config(GPIO_CFG(GPIO_TP_RST_N, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-    gpio_set_value(GPIO_TP_RST_N, HIGH);
-    ts->suspend_state = FALSE;
-    enable_irq(ts->client->irq);
-
-    rc = write_mem(power_cfg_address, 3, (void *) ts->T7);
-    if (rc != 0)
-        TCH_ERR("Driver can't return from deep sleep mode [%d].", rc);
-    else
-        TCH_MSG("Return from sleep mode.");
-
-    //atmel_mxt165_reset();
-    MXT_GetConfigStatus();
-    //MXT_InitConfig();
-    MXT_Calibrate();
-
-    TCH_MSG("GPIO_TP_RST_N = %d", gpio_get_value(GPIO_TP_RST_N));
-    TCH_MSG("GPIO_TP_INT_N = %d", gpio_get_value(GPIO_TP_INT_N));
-    TCH_DBG(DB_LEVEL1, "Done.");
-}
-#endif
-
-#ifdef CONFIG_PM
-static int atmel_mxt165_suspend(struct device *dev)
-{
-    //struct st1332_data *ts = dev_get_drvdata(dev);
-    TCH_DBG(DB_LEVEL1, "Done.");
-    return 0;
-}
-
-static int atmel_mxt165_resume(struct device *dev)
-{
-    //struct st1332_data *ts = dev_get_drvdata(dev);
-    TCH_DBG(DB_LEVEL1, "Done.");
-    return 0;
-}
-
-static struct dev_pm_ops atmel_mxt165_pm_ops = {
-    .suspend = atmel_mxt165_suspend,
-    .resume  = atmel_mxt165_resume,
-};
-#else
 static int atmel_mxt165_suspend(struct i2c_client *client, pm_message_t state)
 {
-    //struct st1332_data *ts = i2c_get_clientdata(client);
     TCH_DBG(DB_LEVEL1, "Done.");
     return 0;
 }
 
 static int atmel_mxt165_resume(struct i2c_client *client)
 {
-    //struct st1332_data *ts = i2c_get_clientdata(client);
     TCH_DBG(DB_LEVEL1, "Done.");
     return 0;
 }
-#endif
 
 static const struct i2c_device_id atmel_mxt165_id[] = {
     { TOUCH_DEVICE_NAME, TOUCH_DEVICE_I2C_ADDRESS },
@@ -1317,20 +1142,14 @@ static const struct i2c_device_id atmel_mxt165_id[] = {
 MODULE_DEVICE_TABLE(i2c, atmel_mxt165_id);
 
 static struct i2c_driver atmel_mxt165_i2c_driver = {
-    .driver = {
-        .owner  = THIS_MODULE,
-        .name   = TOUCH_DEVICE_NAME,
-#ifdef CONFIG_PM
-        .pm     = &atmel_mxt165_pm_ops,
-#endif
-    },
-    .id_table   = atmel_mxt165_id,
-    .probe      = atmel_mxt165_probe,
-    .remove     = atmel_mxt165_remove,
-#ifndef CONFIG_PM
-    .suspend    = atmel_mxt165_suspend,
-    .resume     = atmel_mxt165_resume,
-#endif
+   .driver = {
+      .name   = TOUCH_DEVICE_NAME,
+   },
+   .id_table   = atmel_mxt165_id,
+   .probe      = atmel_mxt165_probe,
+   .remove     = atmel_mxt165_remove,
+   .suspend    = atmel_mxt165_suspend,
+   .resume     = atmel_mxt165_resume,
 };
 
 static int __init atmel_mxt165_init( void )
@@ -1348,7 +1167,7 @@ static void __exit atmel_mxt165_exit( void )
 module_init(atmel_mxt165_init);
 module_exit(atmel_mxt165_exit);
 
-MODULE_AUTHOR("FIH Div2 Dep5 Peripheral Team FromkerGu <fromkergu@fih-foxconn.com>");
-MODULE_DESCRIPTION("ATMEL MXT165 Touch Screen Driver");
-MODULE_VERSION("1.6");
+MODULE_DESCRIPTION("ATMEL MXT165 Touchscreen Driver");
+MODULE_AUTHOR("FIH Div2 Dep5 Peripheral Team");
+MODULE_VERSION("0.2.4");
 MODULE_LICENSE("GPL");

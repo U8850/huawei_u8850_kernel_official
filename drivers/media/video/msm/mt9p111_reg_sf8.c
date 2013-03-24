@@ -104,16 +104,9 @@ struct mt9p111_i2c_reg_conf const init_tbl[] = {
     {0xA014, 0x00A8 , WORD_LEN, 0 },	// FD_MIN_EXPECTED60HZ_FLICKER_PERIOD
     {0xA016, 0x00BC , WORD_LEN, 0 },	// FD_MAX_EXPECTED60HZ_FLICKER_PERIOD
     {0xA018, 0x00D6 , WORD_LEN, 0 },	// FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_A
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-#if 0    
-    {0xA01A, 0x0075, WORD_LEN, 0 },   // FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_B
-    {0xA01E, 0x0062, WORD_LEN, 0 },   // FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_B	
-#else
-    {0xA01A, 0x0095, WORD_LEN, 0 },   // FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_B	
-    {0xA01C, 0x00B2 , WORD_LEN, 0 },  // FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_A
-    {0xA01E, 0x007C, WORD_LEN, 0 },   // FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_B
-#endif    
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
+    {0xA01A, 0x0075, WORD_LEN, 0 }, 	// FD_EXPECTED50HZ_FLICKER_PERIOD_IN_CONTEXT_B
+    {0xA01C, 0x00B2 , WORD_LEN, 0 },	// FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_A
+    {0xA01E, 0x0062, WORD_LEN, 0 }, 	// FD_EXPECTED60HZ_FLICKER_PERIOD_IN_CONTEXT_B
     {0xA000, 0x10 , BYTE_LEN, 0 },	// FD_STATUS
     {0x8417, 0x02 , BYTE_LEN, 0 },	// SEQ_STATE_CFG_1_FD
     {0x8404, 0x06, BYTE_LEN, 0 },  // SEQ_CMD
@@ -501,13 +494,13 @@ static struct mt9p111_i2c_reg_conf const lc_tbl[] = {
 };
 
 static const struct mt9p111_i2c_reg_conf const otp_outdoor_daylight_tbl[] = {
-	{ 0xAC9A, 0x78, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_0
-	{ 0xAC9C, 0x7A, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_2
+	{ 0xAC9A, 0x72, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_0
+	{ 0xAC9C, 0x7E, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_2
 };
 
 static const struct mt9p111_i2c_reg_conf const otp_tbl[] = {
 	{ 0xAC9A, 0x7B, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_0
-    { 0xAC9C, 0x7A, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_2
+    { 0xAC9C, 0x82, BYTE_LEN, 0 },// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_2
 };
 
 static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
@@ -527,7 +520,7 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 	{ 0xAC43, 0x66, BYTE_LEN, 0 },	// AWB_MAX_ACCEPTED_POST_AWB_B2G_RATIO
 	//awb_patch
 	{ 0xACB0, 0x31, BYTE_LEN, 0 },	// AWB_RG_MIN
-	{ 0xACB1, 0x60, BYTE_LEN, 0 },	// AWB_RG_MAX
+	{ 0xACB1, 0x5B, BYTE_LEN, 0 },	// AWB_RG_MAX
 	{ 0xACB4, 0x2A, BYTE_LEN, 0 },	// AWB_BG_MIN
 	{ 0xACB5, 0x5B, BYTE_LEN, 0 },	// AWB_BG_MAX
 	{ 0xACB2, 0x3C, BYTE_LEN, 0 },	// AWB_RG_MIN_BRIGHT
@@ -541,15 +534,15 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 	{ 0xAC09, 0x01, BYTE_LEN, 0 },	// AWB_MODE_EX	 ??? not sure is WORD_LEN or BYTE_LEN
 	{ 0xAC22, 0x0000, WORD_LEN, 0 },	// AWB_SHARPNESS_TH   ??? not sure is WORD_LEN or BYTE_LEN 
     //soc5140_ccm_settings: from 0816 KI
-	{ 0xAC46, 0x01DB, WORD_LEN, 0 },	// AWB_LEFT_CCM_0
-	{ 0xAC48, 0xFFA9, WORD_LEN, 0 },	// AWB_LEFT_CCM_1
-	{ 0xAC4A, 0xFF7C, WORD_LEN, 0 },	// AWB_LEFT_CCM_2
-	{ 0xAC4C, 0xFFB6, WORD_LEN, 0 },	// AWB_LEFT_CCM_3
-	{ 0xAC4E, 0x012C, WORD_LEN, 0 },	// AWB_LEFT_CCM_4
-	{ 0xAC50, 0x001E, WORD_LEN, 0 },	// AWB_LEFT_CCM_5
-	{ 0xAC52, 0xFFBF, WORD_LEN, 0 },	// AWB_LEFT_CCM_6
-	{ 0xAC54, 0xFDFE, WORD_LEN, 0 },	// AWB_LEFT_CCM_7
-	{ 0xAC56, 0x0343, WORD_LEN, 0 },	// AWB_LEFT_CCM_8
+	{ 0xAC46, 0x01C4, WORD_LEN, 0 },	// AWB_LEFT_CCM_0
+	{ 0xAC48, 0xFF7A, WORD_LEN, 0 },	// AWB_LEFT_CCM_1
+	{ 0xAC4A, 0xFFC2, WORD_LEN, 0 },	// AWB_LEFT_CCM_2
+	{ 0xAC4C, 0xFFA6, WORD_LEN, 0 },	// AWB_LEFT_CCM_3
+	{ 0xAC4E, 0x018F, WORD_LEN, 0 },	// AWB_LEFT_CCM_4
+	{ 0xAC50, 0xFFCB, WORD_LEN, 0 },	// AWB_LEFT_CCM_5
+	{ 0xAC52, 0xFFE9, WORD_LEN, 0 },	// AWB_LEFT_CCM_6
+	{ 0xAC54, 0xFF63, WORD_LEN, 0 },	// AWB_LEFT_CCM_7
+	{ 0xAC56, 0x01B4, WORD_LEN, 0 },	// AWB_LEFT_CCM_8
 	{ 0xAC58, 0x00C6, WORD_LEN, 0 },	// AWB_LEFT_CCM_R2BRATIO
 	{ 0xAC5C, 0x01E8, WORD_LEN, 0 },	// AWB_RIGHT_CCM_0
 	{ 0xAC5E, 0xFF5C, WORD_LEN, 0 },	// AWB_RIGHT_CCM_1
@@ -571,12 +564,12 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 	{ 0xAC80, 0x0096, WORD_LEN, 0 },	// AWB_LL_CCM_7
 	{ 0xAC82, 0x001D, WORD_LEN, 0 },	// AWB_LL_CCM_8
 	{ 0xAC96, 0x10 , BYTE_LEN, 0 },	// AWB_TINT_TH
-	{ 0xAC97, 0x65 , BYTE_LEN, 0 },	// AWB_LEFT_TINT_COEF_FOR_CCM_ROW_0
-	{ 0xAC98, 0x80 , BYTE_LEN, 0 }, // AWB_LEFT_TINT_COEF_FOR_CCM_ROW_1
-	{ 0xAC99, 0x79 , BYTE_LEN, 0 },	// AWB_LEFT_TINT_COEF_FOR_CCM_ROW_2
+	{ 0xAC97, 0x58 , BYTE_LEN, 0 },	// AWB_LEFT_TINT_COEF_FOR_CCM_ROW_0
+	{ 0xAC98, 0x8C , BYTE_LEN, 0 }, // AWB_LEFT_TINT_COEF_FOR_CCM_ROW_1
+	{ 0xAC99, 0x80 , BYTE_LEN, 0 },	// AWB_LEFT_TINT_COEF_FOR_CCM_ROW_2
 	{ 0xAC9A, 0x7B , BYTE_LEN, 0 },	// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_0
 	{ 0xAC9B, 0x80 , BYTE_LEN, 0 },	// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_1
-	{ 0xAC9C, 0x7A , BYTE_LEN, 0 },	// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_2
+	{ 0xAC9C, 0x82 , BYTE_LEN, 0 },	// AWB_RIGHT_TINT_COEF_FOR_CCM_ROW_2
 	{ 0xB83E, 0x10 , BYTE_LEN, 0 },	// STAT_AWB_WINDOW_POS_X
 	{ 0xB83F, 0x10 , BYTE_LEN, 0 },	// STAT_AWB_WINDOW_POS_Y
 	{ 0xB840, 0xDF , BYTE_LEN, 0 },	// STAT_AWB_WINDOW_SIZE_X
@@ -680,7 +673,7 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 	{ 0xB863, 0x02, BYTE_LEN, 0 },	// STAT_BM_MUL
 	{ 0xB827, 0x0F, BYTE_LEN, 0 },	// STAT_AE_EV_SHIFT
 	//{ 0xA409, 0x4A, BYTE_LEN, 0 },	// AE_RULE_BASE_TARGET
-	{ 0xA409, 0x40, BYTE_LEN, 0 },	// 134
+	{ 0xA409, 0x42, BYTE_LEN, 0 },	// 134
 	{ 0xA805, 0x06, BYTE_LEN, 0 },	// AE_TRACK_GATE   ??? not sure is WORD_LEN or BYTE_LEN
 	{ 0xA80D, 0x08, BYTE_LEN, 0 },
 	{ 0xA816, 0x0002, WORD_LEN, 0 },	// AE_TRACK_MIN_INT_TIME_ROWS
@@ -798,22 +791,12 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 	//manual_FD
 	{ 0x8417, 0x01, BYTE_LEN, 0 },	// SEQ_STATE_CFG_1_FD
 	//tx_setting
-	{ 0xC8ED, 0x00, BYTE_LEN, 0 },	// CAM_TX_ENABLE_MODE Context A,B time
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-#if 0
-    { 0x8419, 0x04 , BYTE_LEN, 0 }, // SEQ_STATE_CFG_1_AF
-#else    
-    { 0x8419, 0x05 , BYTE_LEN, 0 }, // SEQ_STATE_CFG_1_AF
-#endif
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
+	{ 0xC8ED, 0x03, BYTE_LEN, 0 },	// CAM_TX_ENABLE_MODE Context A,B time
+	{ 0x8419, 0x04 , BYTE_LEN, 0 },	// SEQ_STATE_CFG_1_AF
 	{ 0x3EDA, 0x6060, WORD_LEN, 0 },	  // DAC_LD_14_15
 	{ 0x8404, 0x06 , BYTE_LEN, 300 },	// SEQ_CMD
 };
 
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-//  This 3M Module setting, Not for 5M Module.
-#if 0
-	
 static struct mt9p111_i2c_reg_conf const char_tbl[] = {
 	//[Step3-Recommended]
 	//[k28a_rev3_FW_patch7]
@@ -959,7 +942,7 @@ static struct mt9p111_i2c_reg_conf const char_tbl[] = {
 	{ 0x897C, 0x1984, WORD_LEN, 0 },
 	{ 0x897E, 0x0000, WORD_LEN, 0 },
 	{ 0x8980, 0xD0BF, WORD_LEN, 0 },
-	{ 0x8982, 0x1988, WORD_LEN, 0 }, 
+	{ 0x8982, 0x1988, WORD_LEN, 0 },
 	{ 0x8984, 0x0000, WORD_LEN, 0 },
 	{ 0x8986, 0xD0BF, WORD_LEN, 0 },
 	{ 0x8988, 0x198C, WORD_LEN, 0 },
@@ -1894,929 +1877,38 @@ static struct mt9p111_i2c_reg_conf const char_tbl[] = {
 	{ 0x3E1A, 0xA582, WORD_LEN, 0 },  // SAMP_TX_BOOST
 	{ 0x3E2E, 0xEC05, WORD_LEN, 0 },  // SAMP_SPARE
 	{ 0x3EE6, 0xA5C0, WORD_LEN, 0 },  // DAC_LD_26_27
-	{ 0x316C, 0xF43F, WORD_LEN, 0 },  // DAC_TXLO
+	{ 0x316C, 0xB43F, WORD_LEN, 0 },  // DAC_TXLO
 	{ 0x316E, 0xC6FF, WORD_LEN, 0 },  // DAC_ECL
 };    
 
-#else
-	
-static struct mt9p111_i2c_reg_conf const char_tbl[] = {
-    //[Step3-Recommended]
-    //[k28a_rev3_FW_patch7]
-    //  k28a_rev03_patch07_CR30221_MCNEX_AWB_AFNOISE_YOFFSET_APGA_REV1
-    { 0x0982, 0x0000, WORD_LEN, 0 },  // ACCESS_CTL_STAT
-    { 0x098A, 0x0000, WORD_LEN, 0 },  // PHYSICAL_ADDRESS_ACCESS
-    { 0x886C, 0xC0F1, WORD_LEN, 0 },
-    { 0x886E, 0xC5E1, WORD_LEN, 0 },
-    { 0x8870, 0x246A, WORD_LEN, 0 },
-    { 0x8872, 0x1280, WORD_LEN, 0 },
-    { 0x8874, 0xC4E1, WORD_LEN, 0 },
-    { 0x8876, 0xD20F, WORD_LEN, 0 },
-    { 0x8878, 0x2069, WORD_LEN, 0 },
-    { 0x887A, 0x0000, WORD_LEN, 0 },
-    { 0x887C, 0x6A62, WORD_LEN, 0 },
-    { 0x887E, 0x1303, WORD_LEN, 0 },
-    { 0x8880, 0x0084, WORD_LEN, 0 },
-    { 0x8882, 0x1734, WORD_LEN, 0 },
-    { 0x8884, 0x7005, WORD_LEN, 0 },
-    { 0x8886, 0xD801, WORD_LEN, 0 },
-    { 0x8888, 0x8A41, WORD_LEN, 0 },
-    { 0x888A, 0xD900, WORD_LEN, 0 },
-    { 0x888C, 0x0D5A, WORD_LEN, 0 },
-    { 0x888E, 0x0664, WORD_LEN, 0 },
-    { 0x8890, 0x8B61, WORD_LEN, 0 },
-    { 0x8892, 0xE80B, WORD_LEN, 0 },
-    { 0x8894, 0x000D, WORD_LEN, 0 },
-    { 0x8896, 0x0020, WORD_LEN, 0 },
-    { 0x8898, 0xD508, WORD_LEN, 0 },
-    { 0x889A, 0x1504, WORD_LEN, 0 },
-    { 0x889C, 0x1400, WORD_LEN, 0 },
-    { 0x889E, 0x7840, WORD_LEN, 0 },
-    { 0x88A0, 0xD007, WORD_LEN, 0 },
-    { 0x88A2, 0x0DFB, WORD_LEN, 0 },
-    { 0x88A4, 0x9004, WORD_LEN, 0 },
-    { 0x88A6, 0xC4C1, WORD_LEN, 0 },
-    { 0x88A8, 0x2029, WORD_LEN, 0 },
-    { 0x88AA, 0x0300, WORD_LEN, 0 },
-    { 0x88AC, 0x0219, WORD_LEN, 0 },
-    { 0x88AE, 0x06C4, WORD_LEN, 0 },
-    { 0x88B0, 0xFF80, WORD_LEN, 0 },
-    { 0x88B2, 0x08C8, WORD_LEN, 0 },
-    { 0x88B4, 0xFF80, WORD_LEN, 0 },
-    { 0x88B6, 0x086C, WORD_LEN, 0 },
-    { 0x88B8, 0xFF80, WORD_LEN, 0 },
-    { 0x88BA, 0x08C0, WORD_LEN, 0 },
-    { 0x88BC, 0xFF80, WORD_LEN, 0 },
-    { 0x88BE, 0x08C8, WORD_LEN, 0 },
-    { 0x88C0, 0xFF80, WORD_LEN, 0 },
-    { 0x88C2, 0x08D0, WORD_LEN, 0 },
-    { 0x88C4, 0xFF80, WORD_LEN, 0 },
-    { 0x88C6, 0x0978, WORD_LEN, 0 },
-    { 0x88C8, 0x0007, WORD_LEN, 0 },
-    { 0x88CA, 0x0001, WORD_LEN, 0 },
-    { 0x88CC, 0x0000, WORD_LEN, 0 },
-    { 0x88CE, 0x0000, WORD_LEN, 0 },
-    { 0x88D0, 0xC0F1, WORD_LEN, 0 },
-    { 0x88D2, 0x097E, WORD_LEN, 0 },
-    { 0x88D4, 0x06E4, WORD_LEN, 0 },
-    { 0x88D6, 0xDA14, WORD_LEN, 0 },
-    { 0x88D8, 0xD0C8, WORD_LEN, 0 },
-    { 0x88DA, 0xDE00, WORD_LEN, 0 },
-    { 0x88DC, 0xD1C8, WORD_LEN, 0 },
-    { 0x88DE, 0x2E41, WORD_LEN, 0 },
-    { 0x88E0, 0x120C, WORD_LEN, 0 },
-    { 0x88E2, 0xA895, WORD_LEN, 0 },
-    { 0x88E4, 0xD5C7, WORD_LEN, 0 },
-    { 0x88E6, 0xA8D4, WORD_LEN, 0 },
-    { 0x88E8, 0xA8D6, WORD_LEN, 0 },
-    { 0x88EA, 0x0F0A, WORD_LEN, 0 },
-    { 0x88EC, 0x06A4, WORD_LEN, 0 },
-    { 0x88EE, 0x2555, WORD_LEN, 0 },
-    { 0x88F0, 0x1440, WORD_LEN, 0 },
-    { 0x88F2, 0xD0C5, WORD_LEN, 0 },
-    { 0x88F4, 0x2555, WORD_LEN, 0 },
-    { 0x88F6, 0x1441, WORD_LEN, 0 },
-    { 0x88F8, 0x77A9, WORD_LEN, 0 },
-    { 0x88FA, 0xA515, WORD_LEN, 0 },
-    { 0x88FC, 0xD0C3, WORD_LEN, 0 },
-    { 0x88FE, 0xA020, WORD_LEN, 0 },
-    { 0x8900, 0xD1C3, WORD_LEN, 0 },
-    { 0x8902, 0x70E9, WORD_LEN, 0 },
-    { 0x8904, 0x0EEE, WORD_LEN, 0 },
-    { 0x8906, 0x06A4, WORD_LEN, 0 },
-    { 0x8908, 0xDA44, WORD_LEN, 0 },
-    { 0x890A, 0xD0C2, WORD_LEN, 0 },
-    { 0x890C, 0xD1C2, WORD_LEN, 0 },
-    { 0x890E, 0xA502, WORD_LEN, 0 },
-    { 0x8910, 0xD0C2, WORD_LEN, 0 },
-    { 0x8912, 0xA0E0, WORD_LEN, 0 },
-    { 0x8914, 0xD0C2, WORD_LEN, 0 },
-    { 0x8916, 0xB0CB, WORD_LEN, 0 },
-    { 0x8918, 0x8900, WORD_LEN, 0 },
-    { 0x891A, 0xDB08, WORD_LEN, 0 },
-    { 0x891C, 0xDAF0, WORD_LEN, 0 },
-    { 0x891E, 0x19B0, WORD_LEN, 0 },
-    { 0x8920, 0x00C2, WORD_LEN, 0 },
-    { 0x8922, 0xB8A6, WORD_LEN, 0 },
-    { 0x8924, 0xA900, WORD_LEN, 0 },
-    { 0x8926, 0xD851, WORD_LEN, 0 },
-    { 0x8928, 0x19B2, WORD_LEN, 0 },
-    { 0x892A, 0x0002, WORD_LEN, 0 },
-    { 0x892C, 0xD852, WORD_LEN, 0 },
-    { 0x892E, 0x19B3, WORD_LEN, 0 },
-    { 0x8930, 0x0002, WORD_LEN, 0 },
-    { 0x8932, 0xD855, WORD_LEN, 0 },
-    { 0x8934, 0x19B6, WORD_LEN, 0 },
-    { 0x8936, 0x0002, WORD_LEN, 0 },
-    { 0x8938, 0xD856, WORD_LEN, 0 },
-    { 0x893A, 0x19B7, WORD_LEN, 0 },
-    { 0x893C, 0x0002, WORD_LEN, 0 },
-    { 0x893E, 0xD896, WORD_LEN, 0 },
-    { 0x8940, 0x19B8, WORD_LEN, 0 },
-    { 0x8942, 0x0004, WORD_LEN, 0 },
-    { 0x8944, 0xD814, WORD_LEN, 0 },
-    { 0x8946, 0x19BA, WORD_LEN, 0 },
-    { 0x8948, 0x0004, WORD_LEN, 0 },
-    { 0x894A, 0xD805, WORD_LEN, 0 },
-    { 0x894C, 0xB111, WORD_LEN, 0 },
-    { 0x894E, 0x19B1, WORD_LEN, 0 },
-    { 0x8950, 0x0082, WORD_LEN, 0 },
-    { 0x8952, 0x19B4, WORD_LEN, 0 },
-    { 0x8954, 0x00C2, WORD_LEN, 0 },
-    { 0x8956, 0x19B5, WORD_LEN, 0 },
-    { 0x8958, 0x0082, WORD_LEN, 0 },
-    { 0x895A, 0xD1B2, WORD_LEN, 0 },
-    { 0x895C, 0x2556, WORD_LEN, 0 },
-    { 0x895E, 0x12C0, WORD_LEN, 0 },
-    { 0x8960, 0x0E92, WORD_LEN, 0 },
-    { 0x8962, 0x06A4, WORD_LEN, 0 },
-    { 0x8964, 0xDA2C, WORD_LEN, 0 },
-    { 0x8966, 0xD0B0, WORD_LEN, 0 },
-    { 0x8968, 0x2556, WORD_LEN, 0 },
-    { 0x896A, 0x12C1, WORD_LEN, 0 },
-    { 0x896C, 0xA519, WORD_LEN, 0 },
-    { 0x896E, 0xD0AF, WORD_LEN, 0 },
-    { 0x8970, 0x0145, WORD_LEN, 0 },
-    { 0x8972, 0x06E4, WORD_LEN, 0 },
-    { 0x8974, 0xA020, WORD_LEN, 0 },
-    { 0x8976, 0x78E0, WORD_LEN, 0 },
-    { 0x8978, 0xC0F1, WORD_LEN, 0 },
-    { 0x897A, 0xD0AD, WORD_LEN, 0 },
-    { 0x897C, 0xD1AD, WORD_LEN, 0 },
-    { 0x897E, 0xD2AE, WORD_LEN, 0 },
-    { 0x8980, 0xA020, WORD_LEN, 0 },
-    { 0x8982, 0x8A09, WORD_LEN, 0 },
-    { 0x8984, 0x8A6A, WORD_LEN, 0 },
-    { 0x8986, 0xB808, WORD_LEN, 0 },
-    { 0x8988, 0x7865, WORD_LEN, 0 },
-    { 0x898A, 0xB880, WORD_LEN, 0 },
-    { 0x898C, 0x2841, WORD_LEN, 0 },
-    { 0x898E, 0x020C, WORD_LEN, 0 },
-    { 0x8990, 0xAA89, WORD_LEN, 0 },
-    { 0x8992, 0xAA0A, WORD_LEN, 0 },
-    { 0x8994, 0xD2A9, WORD_LEN, 0 },
-    { 0x8996, 0x8A00, WORD_LEN, 0 },
-    { 0x8998, 0x0809, WORD_LEN, 0 },
-    { 0x899A, 0x01DE, WORD_LEN, 0 },
-    { 0x899C, 0xB8A7, WORD_LEN, 0 },
-    { 0x899E, 0xAA00, WORD_LEN, 0 },
-    { 0x89A0, 0xDBFF, WORD_LEN, 0 },
-    { 0x89A2, 0x2B41, WORD_LEN, 0 },
-    { 0x89A4, 0x0200, WORD_LEN, 0 },
-    { 0x89A6, 0xAA0C, WORD_LEN, 0 },
-    { 0x89A8, 0x1228, WORD_LEN, 0 },
-    { 0x89AA, 0x0080, WORD_LEN, 0 },
-    { 0x89AC, 0xAA6D, WORD_LEN, 0 },
-    { 0x89AE, 0x0815, WORD_LEN, 0 },
-    { 0x89B0, 0x01DE, WORD_LEN, 0 },
-    { 0x89B2, 0xB8A7, WORD_LEN, 0 },
-    { 0x89B4, 0x1A28, WORD_LEN, 0 },
-    { 0x89B6, 0x0002, WORD_LEN, 0 },
-    { 0x89B8, 0x8123, WORD_LEN, 0 },
-    { 0x89BA, 0x7960, WORD_LEN, 0 },
-    { 0x89BC, 0x1228, WORD_LEN, 0 },
-    { 0x89BE, 0x0080, WORD_LEN, 0 },
-    { 0x89C0, 0xC0D1, WORD_LEN, 0 },
-    { 0x89C2, 0x7EE0, WORD_LEN, 0 },
-    { 0x89C4, 0xC0F1, WORD_LEN, 0 },
-    { 0x89C6, 0x088E, WORD_LEN, 0 },
-    { 0x89C8, 0x06E4, WORD_LEN, 0 },
-    { 0x89CA, 0xDB03, WORD_LEN, 0 },
-    { 0x89CC, 0xD29B, WORD_LEN, 0 },
-    { 0x89CE, 0x8A2E, WORD_LEN, 0 },
-    { 0x89D0, 0x8ACF, WORD_LEN, 0 },
-    { 0x89D2, 0xB908, WORD_LEN, 0 },
-    { 0x89D4, 0x79C5, WORD_LEN, 0 },
-    { 0x89D6, 0xDD65, WORD_LEN, 0 },
-    { 0x89D8, 0x094F, WORD_LEN, 0 },
-    { 0x89DA, 0x00D1, WORD_LEN, 0 },
-    { 0x89DC, 0xD90A, WORD_LEN, 0 },
-    { 0x89DE, 0x1A24, WORD_LEN, 0 },
-    { 0x89E0, 0x0042, WORD_LEN, 0 },
-    { 0x89E2, 0x8A24, WORD_LEN, 0 },
-    { 0x89E4, 0xE1E5, WORD_LEN, 0 },
-    { 0x89E6, 0xF6C9, WORD_LEN, 0 },
-    { 0x89E8, 0xD902, WORD_LEN, 0 },
-    { 0x89EA, 0x2941, WORD_LEN, 0 },
-    { 0x89EC, 0x0200, WORD_LEN, 0 },
-    { 0x89EE, 0xAA0E, WORD_LEN, 0 },
-    { 0x89F0, 0xAA2F, WORD_LEN, 0 },
-    { 0x89F2, 0x70A9, WORD_LEN, 0 },
-    { 0x89F4, 0xF014, WORD_LEN, 0 },
-    { 0x89F6, 0xE1C8, WORD_LEN, 0 },
-    { 0x89F8, 0x0036, WORD_LEN, 0 },
-    { 0x89FA, 0x000B, WORD_LEN, 0 },
-    { 0x89FC, 0xE0C8, WORD_LEN, 0 },
-    { 0x89FE, 0x003A, WORD_LEN, 0 },
-    { 0x8A00, 0x000A, WORD_LEN, 0 },
-    { 0x8A02, 0xD901, WORD_LEN, 0 },
-    { 0x8A04, 0x2941, WORD_LEN, 0 },
-    { 0x8A06, 0x0200, WORD_LEN, 0 },
-    { 0x8A08, 0xAA0E, WORD_LEN, 0 },
-    { 0x8A0A, 0xAA2F, WORD_LEN, 0 },
-    { 0x8A0C, 0xD848, WORD_LEN, 0 },
-    { 0x8A0E, 0xF008, WORD_LEN, 0 },
-    { 0x8A10, 0xD900, WORD_LEN, 0 },
-    { 0x8A12, 0x2941, WORD_LEN, 0 },
-    { 0x8A14, 0x0200, WORD_LEN, 0 },
-    { 0x8A16, 0xAA0E, WORD_LEN, 0 },
-    { 0x8A18, 0xAA2F, WORD_LEN, 0 },
-    { 0x8A1A, 0xD820, WORD_LEN, 0 },
-    { 0x8A1C, 0xD288, WORD_LEN, 0 },
-    { 0x8A1E, 0x8A26, WORD_LEN, 0 },
-    { 0x8A20, 0xB961, WORD_LEN, 0 },
-    { 0x8A22, 0xAA26, WORD_LEN, 0 },
-    { 0x8A24, 0xF00D, WORD_LEN, 0 },
-    { 0x8A26, 0x091F, WORD_LEN, 0 },
-    { 0x8A28, 0x0091, WORD_LEN, 0 },
-    { 0x8A2A, 0x8A24, WORD_LEN, 0 },
-    { 0x8A2C, 0xF1E5, WORD_LEN, 0 },
-    { 0x8A2E, 0x0913, WORD_LEN, 0 },
-    { 0x8A30, 0x0812, WORD_LEN, 0 },
-    { 0x8A32, 0x08E1, WORD_LEN, 0 },
-    { 0x8A34, 0x8812, WORD_LEN, 0 },
-    { 0x8A36, 0x2B41, WORD_LEN, 0 },
-    { 0x8A38, 0x0201, WORD_LEN, 0 },
-    { 0x8A3A, 0xAA2E, WORD_LEN, 0 },
-    { 0x8A3C, 0xAA6F, WORD_LEN, 0 },
-    { 0x8A3E, 0x0081, WORD_LEN, 0 },
-    { 0x8A40, 0x06C4, WORD_LEN, 0 },
-    { 0x8A42, 0x09F7, WORD_LEN, 0 },
-    { 0x8A44, 0x8051, WORD_LEN, 0 },
-    { 0x8A46, 0x8A24, WORD_LEN, 0 },
-    { 0x8A48, 0xF1F3, WORD_LEN, 0 },
-    { 0x8A4A, 0x78E0, WORD_LEN, 0 },
-    { 0x8A4C, 0xC0F1, WORD_LEN, 0 },
-    { 0x8A4E, 0x0FFA, WORD_LEN, 0 },
-    { 0x8A50, 0x0684, WORD_LEN, 0 },
-    { 0x8A52, 0xD67A, WORD_LEN, 0 },
-    { 0x8A54, 0x7508, WORD_LEN, 0 },
-    { 0x8A56, 0x8E01, WORD_LEN, 0 },
-    { 0x8A58, 0xD179, WORD_LEN, 0 },
-    { 0x8A5A, 0x2046, WORD_LEN, 0 },
-    { 0x8A5C, 0x00C0, WORD_LEN, 0 },
-    { 0x8A5E, 0xAE01, WORD_LEN, 0 },
-    { 0x8A60, 0x1145, WORD_LEN, 0 },
-    { 0x8A62, 0x0080, WORD_LEN, 0 },
-    { 0x8A64, 0x1146, WORD_LEN, 0 },
-    { 0x8A66, 0x0082, WORD_LEN, 0 },
-    { 0x8A68, 0xB808, WORD_LEN, 0 },
-    { 0x8A6A, 0x7845, WORD_LEN, 0 },
-    { 0x8A6C, 0x0817, WORD_LEN, 0 },
-    { 0x8A6E, 0x001E, WORD_LEN, 0 },
-    { 0x8A70, 0x8900, WORD_LEN, 0 },
-    { 0x8A72, 0x8941, WORD_LEN, 0 },
-    { 0x8A74, 0xB808, WORD_LEN, 0 },
-    { 0x8A76, 0x7845, WORD_LEN, 0 },
-    { 0x8A78, 0x080B, WORD_LEN, 0 },
-    { 0x8A7A, 0x00DE, WORD_LEN, 0 },
-    { 0x8A7C, 0x70A9, WORD_LEN, 0 },
-    { 0x8A7E, 0xFFD2, WORD_LEN, 0 },
-    { 0x8A80, 0x7508, WORD_LEN, 0 },
-    { 0x8A82, 0x1604, WORD_LEN, 0 },
-    { 0x8A84, 0x1090, WORD_LEN, 0 },
-    { 0x8A86, 0x0D93, WORD_LEN, 0 },
-    { 0x8A88, 0x1400, WORD_LEN, 0 },
-    { 0x8A8A, 0x8EEA, WORD_LEN, 0 },
-    { 0x8A8C, 0x8E0B, WORD_LEN, 0 },
-    { 0x8A8E, 0x214A, WORD_LEN, 0 },
-    { 0x8A90, 0x2040, WORD_LEN, 0 },
-    { 0x8A92, 0x8E2D, WORD_LEN, 0 },
-    { 0x8A94, 0xBF08, WORD_LEN, 0 },
-    { 0x8A96, 0x7F05, WORD_LEN, 0 },
-    { 0x8A98, 0x8E0C, WORD_LEN, 0 },
-    { 0x8A9A, 0xB808, WORD_LEN, 0 },
-    { 0x8A9C, 0x7825, WORD_LEN, 0 },
-    { 0x8A9E, 0x7710, WORD_LEN, 0 },
-    { 0x8AA0, 0x21C2, WORD_LEN, 0 },
-    { 0x8AA2, 0x244C, WORD_LEN, 0 },
-    { 0x8AA4, 0x081D, WORD_LEN, 0 },
-    { 0x8AA6, 0x03E3, WORD_LEN, 0 },
-    { 0x8AA8, 0xD9FF, WORD_LEN, 0 },
-    { 0x8AAA, 0x2702, WORD_LEN, 0 },
-    { 0x8AAC, 0x1002, WORD_LEN, 0 },
-    { 0x8AAE, 0x2A05, WORD_LEN, 0 },
-    { 0x8AB0, 0x037E, WORD_LEN, 0 },
-    { 0x8AB2, 0x0876, WORD_LEN, 0 },
-    { 0x8AB4, 0x06E4, WORD_LEN, 0 },
-    { 0x8AB6, 0x702F, WORD_LEN, 0 },
-    { 0x8AB8, 0x7810, WORD_LEN, 0 },
-    { 0x8ABA, 0x7F02, WORD_LEN, 0 },
-    { 0x8ABC, 0x7FF0, WORD_LEN, 0 },
-    { 0x8ABE, 0xF00B, WORD_LEN, 0 },
-    { 0x8AC0, 0x78E2, WORD_LEN, 0 },
-    { 0x8AC2, 0x2805, WORD_LEN, 0 },
-    { 0x8AC4, 0x037E, WORD_LEN, 0 },
-    { 0x8AC6, 0x0862, WORD_LEN, 0 },
-    { 0x8AC8, 0x06E4, WORD_LEN, 0 },
-    { 0x8ACA, 0x702F, WORD_LEN, 0 },
-    { 0x8ACC, 0x7810, WORD_LEN, 0 },
-    { 0x8ACE, 0x671F, WORD_LEN, 0 },
-    { 0x8AD0, 0x7FF0, WORD_LEN, 0 },
-    { 0x8AD2, 0x7FEF, WORD_LEN, 0 },
-    { 0x8AD4, 0x8E08, WORD_LEN, 0 },
-    { 0x8AD6, 0xBF06, WORD_LEN, 0 },
-    { 0x8AD8, 0xD15A, WORD_LEN, 0 },
-    { 0x8ADA, 0xB8C3, WORD_LEN, 0 },
-    { 0x8ADC, 0x78E5, WORD_LEN, 0 },
-    { 0x8ADE, 0xB88F, WORD_LEN, 0 },
-    { 0x8AE0, 0x1908, WORD_LEN, 0 },
-    { 0x8AE2, 0x0024, WORD_LEN, 0 },
-    { 0x8AE4, 0x2841, WORD_LEN, 0 },
-    { 0x8AE6, 0x0201, WORD_LEN, 0 },
-    { 0x8AE8, 0x1E26, WORD_LEN, 0 },
-    { 0x8AEA, 0x1042, WORD_LEN, 0 },
-    { 0x8AEC, 0x0D15, WORD_LEN, 0 },
-    { 0x8AEE, 0x1423, WORD_LEN, 0 },
-    { 0x8AF0, 0x1E27, WORD_LEN, 0 },
-    { 0x8AF2, 0x1002, WORD_LEN, 0 },
-    { 0x8AF4, 0x214C, WORD_LEN, 0 },
-    { 0x8AF6, 0xA000, WORD_LEN, 0 },
-    { 0x8AF8, 0x214A, WORD_LEN, 0 },
-    { 0x8AFA, 0x2040, WORD_LEN, 0 },
-    { 0x8AFC, 0x21C2, WORD_LEN, 0 },
-    { 0x8AFE, 0x2442, WORD_LEN, 0 },
-    { 0x8B00, 0x8E21, WORD_LEN, 0 },
-    { 0x8B02, 0x214F, WORD_LEN, 0 },
-    { 0x8B04, 0x0040, WORD_LEN, 0 },
-    { 0x8B06, 0x090F, WORD_LEN, 0 },
-    { 0x8B08, 0x2010, WORD_LEN, 0 },
-    { 0x8B0A, 0x2145, WORD_LEN, 0 },
-    { 0x8B0C, 0x0181, WORD_LEN, 0 },
-    { 0x8B0E, 0xAE21, WORD_LEN, 0 },
-    { 0x8B10, 0xF003, WORD_LEN, 0 },
-    { 0x8B12, 0xB8A2, WORD_LEN, 0 },
-    { 0x8B14, 0xAE01, WORD_LEN, 0 },
-    { 0x8B16, 0x0BFA, WORD_LEN, 0 },
-    { 0x8B18, 0xFFE3, WORD_LEN, 0 },
-    { 0x8B1A, 0x70A9, WORD_LEN, 0 },
-    { 0x8B1C, 0x0789, WORD_LEN, 0 },
-    { 0x8B1E, 0x0684, WORD_LEN, 0 },
-    { 0x8B20, 0xD149, WORD_LEN, 0 },
-    { 0x8B22, 0xD24A, WORD_LEN, 0 },
-    { 0x8B24, 0x11B2, WORD_LEN, 0 },
-    { 0x8B26, 0x8903, WORD_LEN, 0 },
-    { 0x8B28, 0x1252, WORD_LEN, 0 },
-    { 0x8B2A, 0x0100, WORD_LEN, 0 },
-    { 0x8B2C, 0x7B6F, WORD_LEN, 0 },
-    { 0x8B2E, 0xB808, WORD_LEN, 0 },
-    { 0x8B30, 0x2004, WORD_LEN, 0 },
-    { 0x8B32, 0x0F80, WORD_LEN, 0 },
-    { 0x8B34, 0x0000, WORD_LEN, 0 },
-    { 0x8B36, 0xFF00, WORD_LEN, 0 },
-    { 0x8B38, 0x7865, WORD_LEN, 0 },
-    { 0x8B3A, 0x19B2, WORD_LEN, 0 },
-    { 0x8B3C, 0x8024, WORD_LEN, 0 },
-    { 0x8B3E, 0xD044, WORD_LEN, 0 },
-    { 0x8B40, 0x8801, WORD_LEN, 0 },
-    { 0x8B42, 0xB8E1, WORD_LEN, 0 },
-    { 0x8B44, 0xD800, WORD_LEN, 0 },
-    { 0x8B46, 0xF404, WORD_LEN, 0 },
-    { 0x8B48, 0x1234, WORD_LEN, 0 },
-    { 0x8B4A, 0x0080, WORD_LEN, 0 },
-    { 0x8B4C, 0x1955, WORD_LEN, 0 },
-    { 0x8B4E, 0x803C, WORD_LEN, 0 },
-    { 0x8B50, 0x1233, WORD_LEN, 0 },
-    { 0x8B52, 0x0080, WORD_LEN, 0 },
-    { 0x8B54, 0xB802, WORD_LEN, 0 },
-    { 0x8B56, 0x1957, WORD_LEN, 0 },
-    { 0x8B58, 0x803C, WORD_LEN, 0 },
-    { 0x8B5A, 0x1958, WORD_LEN, 0 },
-    { 0x8B5C, 0x803C, WORD_LEN, 0 },
-    { 0x8B5E, 0x1959, WORD_LEN, 0 },
-    { 0x8B60, 0x803C, WORD_LEN, 0 },
-    { 0x8B62, 0x195A, WORD_LEN, 0 },
-    { 0x8B64, 0x803C, WORD_LEN, 0 },
-    { 0x8B66, 0x7EE0, WORD_LEN, 0 },
-    { 0x8B68, 0xC0F1, WORD_LEN, 0 },
-    { 0x8B6A, 0x0EE6, WORD_LEN, 0 },
-    { 0x8B6C, 0x0684, WORD_LEN, 0 },
-    { 0x8B6E, 0xD523, WORD_LEN, 0 },
-    { 0x8B70, 0x8D2C, WORD_LEN, 0 },
-    { 0x8B72, 0x0983, WORD_LEN, 0 },
-    { 0x8B74, 0x0010, WORD_LEN, 0 },
-    { 0x8B76, 0xD236, WORD_LEN, 0 },
-    { 0x8B78, 0x123A, WORD_LEN, 0 },
-    { 0x8B7A, 0x0083, WORD_LEN, 0 },
-    { 0x8B7C, 0x123B, WORD_LEN, 0 },
-    { 0x8B7E, 0x008F, WORD_LEN, 0 },
-    { 0x8B80, 0x8D55, WORD_LEN, 0 },
-    { 0x8B82, 0xBB08, WORD_LEN, 0 },
-    { 0x8B84, 0x7BE5, WORD_LEN, 0 },
-    { 0x8B86, 0x8DF6, WORD_LEN, 0 },
-    { 0x8B88, 0xBA08, WORD_LEN, 0 },
-    { 0x8B8A, 0x7AE5, WORD_LEN, 0 },
-    { 0x8B8C, 0x0B0D, WORD_LEN, 0 },
-    { 0x8B8E, 0x00A3, WORD_LEN, 0 },
-    { 0x8B90, 0x8DC5, WORD_LEN, 0 },
-    { 0x8B92, 0x8D54, WORD_LEN, 0 },
-    { 0x8B94, 0xAD45, WORD_LEN, 0 },
-    { 0x8B96, 0xF026, WORD_LEN, 0 },
-    { 0x8B98, 0x65DB, WORD_LEN, 0 },
-    { 0x8B9A, 0x8B6D, WORD_LEN, 0 },
-    { 0x8B9C, 0x0815, WORD_LEN, 0 },
-    { 0x8B9E, 0x00E2, WORD_LEN, 0 },
-    { 0x8BA0, 0x65DA, WORD_LEN, 0 },
-    { 0x8BA2, 0x8A51, WORD_LEN, 0 },
-    { 0x8BA4, 0x0A0D, WORD_LEN, 0 },
-    { 0x8BA6, 0x0002, WORD_LEN, 0 },
-    { 0x8BA8, 0xE683, WORD_LEN, 0 },
-    { 0x8BAA, 0x22CA, WORD_LEN, 0 },
-    { 0x8BAC, 0x038B, WORD_LEN, 0 },
-    { 0x8BAE, 0xF69A, WORD_LEN, 0 },
-    { 0x8BB0, 0xDA00, WORD_LEN, 0 },
-    { 0x8BB2, 0xAD45, WORD_LEN, 0 },
-    { 0x8BB4, 0x2540, WORD_LEN, 0 },
-    { 0x8BB6, 0x1343, WORD_LEN, 0 },
-    { 0x8BB8, 0xE180, WORD_LEN, 0 },
-    { 0x8BBA, 0x2540, WORD_LEN, 0 },
-    { 0x8BBC, 0x144F, WORD_LEN, 0 },
-    { 0x8BBE, 0xF6D2, WORD_LEN, 0 },
-    { 0x8BC0, 0x719F, WORD_LEN, 0 },
-    { 0x8BC2, 0x78E0, WORD_LEN, 0 },
-    { 0x8BC4, 0x20A8, WORD_LEN, 0 },
-    { 0x8BC6, 0x0280, WORD_LEN, 0 },
-    { 0x8BC8, 0x8B20, WORD_LEN, 0 },
-    { 0x8BCA, 0x0813, WORD_LEN, 0 },
-    { 0x8BCC, 0x0043, WORD_LEN, 0 },
-    { 0x8BCE, 0xE201, WORD_LEN, 0 },
-    { 0x8BD0, 0x7A4F, WORD_LEN, 0 },
-    { 0x8BD2, 0xAD45, WORD_LEN, 0 },
-    { 0x8BD4, 0xE301, WORD_LEN, 0 },
-    { 0x8BD6, 0xE701, WORD_LEN, 0 },
-    { 0x8BD8, 0xF004, WORD_LEN, 0 },
-    { 0x8BDA, 0x8F20, WORD_LEN, 0 },
-    { 0x8BDC, 0x09F3, WORD_LEN, 0 },
-    { 0x8BDE, 0x8002, WORD_LEN, 0 },
-    { 0x8BE0, 0xD01C, WORD_LEN, 0 },
-    { 0x8BE2, 0x8800, WORD_LEN, 0 },
-    { 0x8BE4, 0xE803, WORD_LEN, 0 },
-    { 0x8BE6, 0x0E0F, WORD_LEN, 0 },
-    { 0x8BE8, 0x1080, WORD_LEN, 0 },
-    { 0x8BEA, 0xD008, WORD_LEN, 0 },
-    { 0x8BEC, 0x8000, WORD_LEN, 0 },
-    { 0x8BEE, 0x8002, WORD_LEN, 0 },
-    { 0x8BF0, 0x7840, WORD_LEN, 0 },
-    { 0x8BF2, 0x06C5, WORD_LEN, 0 },
-    { 0x8BF4, 0x0684, WORD_LEN, 0 },
-    { 0x8BF6, 0x78E0, WORD_LEN, 0 },
-    { 0x8BF8, 0xFF80, WORD_LEN, 0 },
-    { 0x8BFA, 0x0644, WORD_LEN, 0 },
-    { 0x8BFC, 0x0000, WORD_LEN, 0 },
-    { 0x8BFE, 0xF978, WORD_LEN, 0 },
-    { 0x8C00, 0xFF80, WORD_LEN, 0 },
-    { 0x8C02, 0x0E00, WORD_LEN, 0 },
-    { 0x8C04, 0xFF80, WORD_LEN, 0 },
-    { 0x8C06, 0x0B68, WORD_LEN, 0 },
-    { 0x8C08, 0x8000, WORD_LEN, 0 },
-    { 0x8C0A, 0x0164, WORD_LEN, 0 },
-    { 0x8C0C, 0x0000, WORD_LEN, 0 },
-    { 0x8C0E, 0xF9AC, WORD_LEN, 0 },
-    { 0x8C10, 0xFF80, WORD_LEN, 0 },
-    { 0x8C12, 0x0B20, WORD_LEN, 0 },
-    { 0x8C14, 0xFF80, WORD_LEN, 0 },
-    { 0x8C16, 0x0314, WORD_LEN, 0 },
-    { 0x8C18, 0x8000, WORD_LEN, 0 },
-    { 0x8C1A, 0x016C, WORD_LEN, 0 },
-    { 0x8C1C, 0xFF80, WORD_LEN, 0 },
-    { 0x8C1E, 0x0694, WORD_LEN, 0 },
-    { 0x8C20, 0x0000, WORD_LEN, 0 },
-    { 0x8C22, 0xF444, WORD_LEN, 0 },
-    { 0x8C24, 0xFF80, WORD_LEN, 0 },
-    { 0x8C26, 0x0C54, WORD_LEN, 0 },
-    { 0x8C28, 0x8000, WORD_LEN, 0 },
-    { 0x8C2A, 0x009C, WORD_LEN, 0 },
-    { 0x8C2C, 0x8000, WORD_LEN, 0 },
-    { 0x8C2E, 0x0008, WORD_LEN, 0 },
-    { 0x8C30, 0xFF80, WORD_LEN, 0 },
-    { 0x8C32, 0x0DF0, WORD_LEN, 0 },
-    { 0x8C34, 0xFF80, WORD_LEN, 0 },
-    { 0x8C36, 0x02CC, WORD_LEN, 0 },
-    { 0x8C38, 0xFF80, WORD_LEN, 0 },
-    { 0x8C3A, 0x0158, WORD_LEN, 0 },
-    { 0x8C3C, 0xFF80, WORD_LEN, 0 },
-    { 0x8C3E, 0x0290, WORD_LEN, 0 },
-    { 0x8C40, 0xFF00, WORD_LEN, 0 },
-    { 0x8C42, 0x0618, WORD_LEN, 0 },
-    { 0x8C44, 0xFF00, WORD_LEN, 0 },
-    { 0x8C46, 0x33CC, WORD_LEN, 0 },
-    { 0x8C48, 0xFF80, WORD_LEN, 0 },
-    { 0x8C4A, 0x0658, WORD_LEN, 0 },
-    { 0x8C4C, 0xFF80, WORD_LEN, 0 },
-    { 0x8C4E, 0x0250, WORD_LEN, 0 },
-    { 0x8C50, 0x8000, WORD_LEN, 0 },
-    { 0x8C52, 0x0168, WORD_LEN, 0 },
-    { 0x8C54, 0xC0F1, WORD_LEN, 0 },
-    { 0x8C56, 0x0DFE, WORD_LEN, 0 },
-    { 0x8C58, 0x0684, WORD_LEN, 0 },
-    { 0x8C5A, 0x17BC, WORD_LEN, 0 },
-    { 0x8C5C, 0xF00E, WORD_LEN, 0 },
-    { 0x8C5E, 0x8E01, WORD_LEN, 0 },
-    { 0x8C60, 0xB8A4, WORD_LEN, 0 },
-    { 0x8C62, 0xAE01, WORD_LEN, 0 },
-    { 0x8C64, 0x8E09, WORD_LEN, 0 },
-    { 0x8C66, 0xB8E0, WORD_LEN, 0 },
-    { 0x8C68, 0xF29B, WORD_LEN, 0 },
-    { 0x8C6A, 0x17E4, WORD_LEN, 0 },
-    { 0x8C6C, 0xF00D, WORD_LEN, 0 },
-    { 0x8C6E, 0x153A, WORD_LEN, 0 },
-    { 0x8C70, 0x1080, WORD_LEN, 0 },
-    { 0x8C72, 0x153B, WORD_LEN, 0 },
-    { 0x8C74, 0x1081, WORD_LEN, 0 },
-    { 0x8C76, 0xB808, WORD_LEN, 0 },
-    { 0x8C78, 0x7825, WORD_LEN, 0 },
-    { 0x8C7A, 0x16B8, WORD_LEN, 0 },
-    { 0x8C7C, 0x1101, WORD_LEN, 0 },
-    { 0x8C7E, 0x092D, WORD_LEN, 0 },
-    { 0x8C80, 0x0003, WORD_LEN, 0 },
-    { 0x8C82, 0x16B0, WORD_LEN, 0 },
-    { 0x8C84, 0x1082, WORD_LEN, 0 },
-    { 0x8C86, 0x1E3C, WORD_LEN, 0 },
-    { 0x8C88, 0x1082, WORD_LEN, 0 },
-    { 0x8C8A, 0x16B1, WORD_LEN, 0 },
-    { 0x8C8C, 0x1082, WORD_LEN, 0 },
-    { 0x8C8E, 0x1E3D, WORD_LEN, 0 },
-    { 0x8C90, 0x1082, WORD_LEN, 0 },
-    { 0x8C92, 0x16B4, WORD_LEN, 0 },
-    { 0x8C94, 0x1082, WORD_LEN, 0 },
-    { 0x8C96, 0x1E3E, WORD_LEN, 0 },
-    { 0x8C98, 0x1082, WORD_LEN, 0 },
-    { 0x8C9A, 0x16B5, WORD_LEN, 0 },
-    { 0x8C9C, 0x1082, WORD_LEN, 0 },
-    { 0x8C9E, 0x1E3F, WORD_LEN, 0 },
-    { 0x8CA0, 0x1082, WORD_LEN, 0 },
-    { 0x8CA2, 0x8E40, WORD_LEN, 0 },
-    { 0x8CA4, 0xBAA6, WORD_LEN, 0 },
-    { 0x8CA6, 0xAE40, WORD_LEN, 0 },
-    { 0x8CA8, 0x098F, WORD_LEN, 0 },
-    { 0x8CAA, 0x0022, WORD_LEN, 0 },
-    { 0x8CAC, 0x16BA, WORD_LEN, 0 },
-    { 0x8CAE, 0x1102, WORD_LEN, 0 },
-    { 0x8CB0, 0x0A87, WORD_LEN, 0 },
-    { 0x8CB2, 0x0003, WORD_LEN, 0 },
-    { 0x8CB4, 0x16B2, WORD_LEN, 0 },
-    { 0x8CB6, 0x1084, WORD_LEN, 0 },
-    { 0x8CB8, 0x0F2E, WORD_LEN, 0 },
-    { 0x8CBA, 0x0664, WORD_LEN, 0 },
-    { 0x8CBC, 0x16B0, WORD_LEN, 0 },
-    { 0x8CBE, 0x1083, WORD_LEN, 0 },
-    { 0x8CC0, 0x1E3C, WORD_LEN, 0 },
-    { 0x8CC2, 0x1002, WORD_LEN, 0 },
-    { 0x8CC4, 0x153A, WORD_LEN, 0 },
-    { 0x8CC6, 0x1080, WORD_LEN, 0 },
-    { 0x8CC8, 0x153B, WORD_LEN, 0 },
-    { 0x8CCA, 0x1081, WORD_LEN, 0 },
-    { 0x8CCC, 0x16B3, WORD_LEN, 0 },
-    { 0x8CCE, 0x1084, WORD_LEN, 0 },
-    { 0x8CD0, 0xB808, WORD_LEN, 0 },
-    { 0x8CD2, 0x7825, WORD_LEN, 0 },
-    { 0x8CD4, 0x16B8, WORD_LEN, 0 },
-    { 0x8CD6, 0x1101, WORD_LEN, 0 },
-    { 0x8CD8, 0x16BA, WORD_LEN, 0 },
-    { 0x8CDA, 0x1102, WORD_LEN, 0 },
-    { 0x8CDC, 0x0F0A, WORD_LEN, 0 },
-    { 0x8CDE, 0x0664, WORD_LEN, 0 },
-    { 0x8CE0, 0x16B1, WORD_LEN, 0 },
-    { 0x8CE2, 0x1083, WORD_LEN, 0 },
-    { 0x8CE4, 0x1E3D, WORD_LEN, 0 },
-    { 0x8CE6, 0x1002, WORD_LEN, 0 },
-    { 0x8CE8, 0x153A, WORD_LEN, 0 },
-    { 0x8CEA, 0x1080, WORD_LEN, 0 },
-    { 0x8CEC, 0x153B, WORD_LEN, 0 },
-    { 0x8CEE, 0x1081, WORD_LEN, 0 },
-    { 0x8CF0, 0x16B6, WORD_LEN, 0 },
-    { 0x8CF2, 0x1084, WORD_LEN, 0 },
-    { 0x8CF4, 0xB808, WORD_LEN, 0 },
-    { 0x8CF6, 0x7825, WORD_LEN, 0 },
-    { 0x8CF8, 0x16B8, WORD_LEN, 0 },
-    { 0x8CFA, 0x1101, WORD_LEN, 0 },
-    { 0x8CFC, 0x16BA, WORD_LEN, 0 },
-    { 0x8CFE, 0x1102, WORD_LEN, 0 },
-    { 0x8D00, 0x0EE6, WORD_LEN, 0 },
-    { 0x8D02, 0x0664, WORD_LEN, 0 },
-    { 0x8D04, 0x16B4, WORD_LEN, 0 },
-    { 0x8D06, 0x1083, WORD_LEN, 0 },
-    { 0x8D08, 0x1E3E, WORD_LEN, 0 },
-    { 0x8D0A, 0x1002, WORD_LEN, 0 },
-    { 0x8D0C, 0x153A, WORD_LEN, 0 },
-    { 0x8D0E, 0x1080, WORD_LEN, 0 },
-    { 0x8D10, 0x153B, WORD_LEN, 0 },
-    { 0x8D12, 0x1081, WORD_LEN, 0 },
-    { 0x8D14, 0x16B7, WORD_LEN, 0 },
-    { 0x8D16, 0x1084, WORD_LEN, 0 },
-    { 0x8D18, 0xB808, WORD_LEN, 0 },
-    { 0x8D1A, 0x7825, WORD_LEN, 0 },
-    { 0x8D1C, 0x16B8, WORD_LEN, 0 },
-    { 0x8D1E, 0x1101, WORD_LEN, 0 },
-    { 0x8D20, 0x16BA, WORD_LEN, 0 },
-    { 0x8D22, 0x1102, WORD_LEN, 0 },
-    { 0x8D24, 0x0EC2, WORD_LEN, 0 },
-    { 0x8D26, 0x0664, WORD_LEN, 0 },
-    { 0x8D28, 0x16B5, WORD_LEN, 0 },
-    { 0x8D2A, 0x1083, WORD_LEN, 0 },
-    { 0x8D2C, 0x1E3F, WORD_LEN, 0 },
-    { 0x8D2E, 0x1002, WORD_LEN, 0 },
-    { 0x8D30, 0x8E00, WORD_LEN, 0 },
-    { 0x8D32, 0xB8A6, WORD_LEN, 0 },
-    { 0x8D34, 0xAE00, WORD_LEN, 0 },
-    { 0x8D36, 0x153A, WORD_LEN, 0 },
-    { 0x8D38, 0x1081, WORD_LEN, 0 },
-    { 0x8D3A, 0x153B, WORD_LEN, 0 },
-    { 0x8D3C, 0x1080, WORD_LEN, 0 },
-    { 0x8D3E, 0xB908, WORD_LEN, 0 },
-    { 0x8D40, 0x7905, WORD_LEN, 0 },
-    { 0x8D42, 0x16BA, WORD_LEN, 0 },
-    { 0x8D44, 0x1100, WORD_LEN, 0 },
-    { 0x8D46, 0x085B, WORD_LEN, 0 },
-    { 0x8D48, 0x0042, WORD_LEN, 0 },
-    { 0x8D4A, 0xD018, WORD_LEN, 0 },
-    { 0x8D4C, 0x9E31, WORD_LEN, 0 },
-    { 0x8D4E, 0x904D, WORD_LEN, 0 },
-    { 0x8D50, 0x0A2B, WORD_LEN, 0 },
-    { 0x8D52, 0x0063, WORD_LEN, 0 },
-    { 0x8D54, 0x8E00, WORD_LEN, 0 },
-    { 0x8D56, 0x16B0, WORD_LEN, 0 },
-    { 0x8D58, 0x1081, WORD_LEN, 0 },
-    { 0x8D5A, 0x1E3C, WORD_LEN, 0 },
-    { 0x8D5C, 0x1042, WORD_LEN, 0 },
-    { 0x8D5E, 0x16B1, WORD_LEN, 0 },
-    { 0x8D60, 0x1081, WORD_LEN, 0 },
-    { 0x8D62, 0x1E3D, WORD_LEN, 0 },
-    { 0x8D64, 0x1042, WORD_LEN, 0 },
-    { 0x8D66, 0x16B4, WORD_LEN, 0 },
-    { 0x8D68, 0x1081, WORD_LEN, 0 },
-    { 0x8D6A, 0x1E3E, WORD_LEN, 0 },
-    { 0x8D6C, 0x1042, WORD_LEN, 0 },
-    { 0x8D6E, 0x16B5, WORD_LEN, 0 },
-    { 0x8D70, 0x1081, WORD_LEN, 0 },
-    { 0x8D72, 0x1E3F, WORD_LEN, 0 },
-    { 0x8D74, 0x1042, WORD_LEN, 0 },
-    { 0x8D76, 0xB886, WORD_LEN, 0 },
-    { 0x8D78, 0xF012, WORD_LEN, 0 },
-    { 0x8D7A, 0x16B2, WORD_LEN, 0 },
-    { 0x8D7C, 0x1081, WORD_LEN, 0 },
-    { 0x8D7E, 0xB8A6, WORD_LEN, 0 },
-    { 0x8D80, 0x1E3C, WORD_LEN, 0 },
-    { 0x8D82, 0x1042, WORD_LEN, 0 },
-    { 0x8D84, 0x16B3, WORD_LEN, 0 },
-    { 0x8D86, 0x1081, WORD_LEN, 0 },
-    { 0x8D88, 0x1E3D, WORD_LEN, 0 },
-    { 0x8D8A, 0x1042, WORD_LEN, 0 },
-    { 0x8D8C, 0x16B6, WORD_LEN, 0 },
-    { 0x8D8E, 0x1081, WORD_LEN, 0 },
-    { 0x8D90, 0x1E3E, WORD_LEN, 0 },
-    { 0x8D92, 0x1042, WORD_LEN, 0 },
-    { 0x8D94, 0x16B7, WORD_LEN, 0 },
-    { 0x8D96, 0x1081, WORD_LEN, 0 },
-    { 0x8D98, 0x1E3F, WORD_LEN, 0 },
-    { 0x8D9A, 0x1042, WORD_LEN, 0 },
-    { 0x8D9C, 0xAE00, WORD_LEN, 0 },
-    { 0x8D9E, 0x0D92, WORD_LEN, 0 },
-    { 0x8DA0, 0x0184, WORD_LEN, 0 },
-    { 0x8DA2, 0x051D, WORD_LEN, 0 },
-    { 0x8DA4, 0x0684, WORD_LEN, 0 },
-    { 0x8DA6, 0x78E0, WORD_LEN, 0 },
-    { 0x8DA8, 0xFF80, WORD_LEN, 0 },
-    { 0x8DAA, 0x050C, WORD_LEN, 0 },
-    { 0x8DAC, 0xE280, WORD_LEN, 0 },
-    { 0x8DAE, 0x24CA, WORD_LEN, 0 },
-    { 0x8DB0, 0x7082, WORD_LEN, 0 },
-    { 0x8DB2, 0x78E0, WORD_LEN, 0 },
-    { 0x8DB4, 0x20E8, WORD_LEN, 0 },
-    { 0x8DB6, 0x01A2, WORD_LEN, 0 },
-    { 0x8DB8, 0x1002, WORD_LEN, 0 },
-    { 0x8DBA, 0x0D02, WORD_LEN, 0 },
-    { 0x8DBC, 0x1902, WORD_LEN, 0 },
-    { 0x8DBE, 0x0094, WORD_LEN, 0 },
-    { 0x8DC0, 0x7FE0, WORD_LEN, 0 },
-    { 0x8DC2, 0x7028, WORD_LEN, 0 },
-    { 0x8DC4, 0x7308, WORD_LEN, 0 },
-    { 0x8DC6, 0x1000, WORD_LEN, 0 },
-    { 0x8DC8, 0x0900, WORD_LEN, 0 },
-    { 0x8DCA, 0x7904, WORD_LEN, 0 },
-    { 0x8DCC, 0x7947, WORD_LEN, 0 },
-    { 0x8DCE, 0x1B00, WORD_LEN, 0 },
-    { 0x8DD0, 0x0064, WORD_LEN, 0 },
-    { 0x8DD2, 0x7EE0, WORD_LEN, 0 },
-    { 0x8DD4, 0xE280, WORD_LEN, 0 },
-    { 0x8DD6, 0x24CA, WORD_LEN, 0 },
-    { 0x8DD8, 0x7082, WORD_LEN, 0 },
-    { 0x8DDA, 0x78E0, WORD_LEN, 0 },
-    { 0x8DDC, 0x20E8, WORD_LEN, 0 },
-    { 0x8DDE, 0x01A2, WORD_LEN, 0 },
-    { 0x8DE0, 0x1102, WORD_LEN, 0 },
-    { 0x8DE2, 0x0502, WORD_LEN, 0 },
-    { 0x8DE4, 0x1802, WORD_LEN, 0 },
-    { 0x8DE6, 0x00B4, WORD_LEN, 0 },
-    { 0x8DE8, 0x7FE0, WORD_LEN, 0 },
-    { 0x8DEA, 0x7028, WORD_LEN, 0 },
-    { 0x8DEC, 0x0000, WORD_LEN, 0 },
-    { 0x8DEE, 0x0000, WORD_LEN, 0 },
-    { 0x8DF0, 0xFF80, WORD_LEN, 0 },
-    { 0x8DF2, 0x0978, WORD_LEN, 0 },
-    { 0x8DF4, 0xFF80, WORD_LEN, 0 },
-    { 0x8DF6, 0x0A4C, WORD_LEN, 0 },
-    { 0x8DF8, 0x0000, WORD_LEN, 0 },
-    { 0x8DFA, 0x08DC, WORD_LEN, 0 },
-    { 0x8DFC, 0x0000, WORD_LEN, 0 },
-    { 0x8DFE, 0x0998, WORD_LEN, 0 },
-    { 0x098E, 0x0016, WORD_LEN, 0 },  // LOGICAL_ADDRESS_ACCESS
-    { 0x8016, 0x086C, WORD_LEN, 0 },  // MON_ADDRESS_LO
-    { 0x8002, 0x0001, WORD_LEN, 300 },  // MON_CMD
-    //char_settings
-    { 0x30D4, 0x9080, WORD_LEN, 0 },  // COLUMN_CORRECTION
-    { 0x316E, 0xC400, WORD_LEN, 0 },  // DAC_ECL
-    { 0x305E, 0x10A0, WORD_LEN, 0 },  // GLOBAL_GAIN
-    { 0x3E00, 0x0010, WORD_LEN, 0 },  // SAMP_CONTROL
-    { 0x3E02, 0xED02, WORD_LEN, 0 },  // SAMP_ADDR_EN
-    { 0x3E04, 0xC88C, WORD_LEN, 0 },  // SAMP_RD1_SIG
-    { 0x3E06, 0xC88C, WORD_LEN, 0 },  // SAMP_RD1_SIG_BOOST
-    { 0x3E08, 0x700A, WORD_LEN, 0 },  // SAMP_RD1_RST
-    { 0x3E0A, 0x701E, WORD_LEN, 0 },  // SAMP_RD1_RST_BOOST
-    { 0x3E0C, 0x00FF, WORD_LEN, 0 },  // SAMP_RST1_EN
-    { 0x3E0E, 0x00FF, WORD_LEN, 0 },  // SAMP_RST1_BOOST
-    { 0x3E10, 0x00FF, WORD_LEN, 0 },  // SAMP_RST1_CLOOP_SH
-    { 0x3E12, 0x0000, WORD_LEN, 0 },  // SAMP_RST_BOOST_SEQ
-    { 0x3E14, 0xC78C, WORD_LEN, 0 },  // SAMP_SAMP1_SIG
-    { 0x3E16, 0x6E06, WORD_LEN, 0 },  // SAMP_SAMP1_RST
-    { 0x3E18, 0xA58C, WORD_LEN, 0 },  // SAMP_TX_EN
-    { 0x3E1A, 0xA58E, WORD_LEN, 0 },  // SAMP_TX_BOOST
-    { 0x3E1C, 0xA58E, WORD_LEN, 0 },  // SAMP_TX_CLOOP_SH
-    { 0x3E1E, 0xC0D0, WORD_LEN, 0 },  // SAMP_TX_BOOST_SEQ
-    { 0x3E20, 0xEB00, WORD_LEN, 0 },  // SAMP_VLN_EN
-    { 0x3E22, 0x00FF, WORD_LEN, 0 },  // SAMP_VLN_HOLD
-    { 0x3E24, 0xEB02, WORD_LEN, 0 },  // SAMP_VCL_EN
-    { 0x3E26, 0xEA02, WORD_LEN, 0 },  // SAMP_COLCLAMP
-    { 0x3E28, 0xEB0A, WORD_LEN, 0 },  // SAMP_SH_VCL
-    { 0x3E2A, 0xEC01, WORD_LEN, 0 },  // SAMP_SH_VREF
-    { 0x3E2C, 0xEB01, WORD_LEN, 0 },  // SAMP_SH_VBST
-    { 0x3E2E, 0x00FF, WORD_LEN, 0 },  // SAMP_SPARE
-    { 0x3E30, 0x00F3, WORD_LEN, 0 },  // SAMP_READOUT
-    { 0x3E32, 0x3DFA, WORD_LEN, 0 },  // SAMP_RESET_DONE
-    { 0x3E34, 0x00FF, WORD_LEN, 0 },  // SAMP_VLN_CLAMP
-    { 0x3E36, 0x00F3, WORD_LEN, 0 },  // SAMP_ASC_INT
-    { 0x3E38, 0x0000, WORD_LEN, 0 },  // SAMP_RS_CLOOP_SH_R
-    { 0x3E3A, 0xF802, WORD_LEN, 0 },  // SAMP_RS_CLOOP_SH
-    { 0x3E3C, 0x0FFF, WORD_LEN, 0 },  // SAMP_RS_BOOST_SEQ
-    { 0x3E3E, 0xEA10, WORD_LEN, 0 },  // SAMP_TXLO_GND
-    { 0x3E40, 0xEB05, WORD_LEN, 0 },  // SAMP_VLN_PER_COL
-    { 0x3E42, 0xE5C8, WORD_LEN, 0 },  // SAMP_RD2_SIG
-    { 0x3E44, 0xE5C8, WORD_LEN, 0 },  // SAMP_RD2_SIG_BOOST
-    { 0x3E46, 0x8C70, WORD_LEN, 0 },  // SAMP_RD2_RST
-    { 0x3E48, 0x8C71, WORD_LEN, 0 },  // SAMP_RD2_RST_BOOST
-    { 0x3E4A, 0x00FF, WORD_LEN, 0 },  // SAMP_RST2_EN
-    { 0x3E4C, 0x00FF, WORD_LEN, 0 },  // SAMP_RST2_BOOST
-    { 0x3E4E, 0x00FF, WORD_LEN, 0 },  // SAMP_RST2_CLOOP_SH
-    { 0x3E50, 0xE38D, WORD_LEN, 0 },  // SAMP_SAMP2_SIG
-    { 0x3E52, 0x8B0A, WORD_LEN, 0 },  // SAMP_SAMP2_RST
-    { 0x3E58, 0xEB0A, WORD_LEN, 0 },  // SAMP_PIX_CLAMP_EN
-    { 0x3E5C, 0x0A00, WORD_LEN, 0 },  // SAMP_PIX_PULLUP_EN
-    { 0x3E5E, 0x00FF, WORD_LEN, 0 },  // SAMP_PIX_PULLDOWN_EN_R
-    { 0x3E60, 0x00FF, WORD_LEN, 0 },  // SAMP_PIX_PULLDOWN_EN_S
-    { 0x3E90, 0x3C01, WORD_LEN, 0 },  // RST_ADDR_EN
-    { 0x3E92, 0x00FF, WORD_LEN, 0 },  // RST_RST_EN
-    { 0x3E94, 0x00FF, WORD_LEN, 0 },  // RST_RST_BOOST
-    { 0x3E96, 0x3C00, WORD_LEN, 0 },  // RST_TX_EN
-    { 0x3E98, 0x3C00, WORD_LEN, 0 },  // RST_TX_BOOST
-    { 0x3E9A, 0x3C00, WORD_LEN, 0 },  // RST_TX_CLOOP_SH
-    { 0x3E9C, 0xC0E0, WORD_LEN, 0 },  // RST_TX_BOOST_SEQ
-    { 0x3E9E, 0x00FF, WORD_LEN, 0 },  // RST_RST_CLOOP_SH
-    { 0x3EA0, 0x0000, WORD_LEN, 0 },  // RST_RST_BOOST_SEQ
-    { 0x3EA6, 0x3C00, WORD_LEN, 0 },  // RST_PIX_PULLUP_EN
-    { 0x3ED8, 0x3057, WORD_LEN, 0 },  // DAC_LD_12_13
-    { 0x316C, 0xB44F, WORD_LEN, 0 },  // DAC_TXLO
-    { 0x316E, 0xC6FF, WORD_LEN, 0 },  // DAC_ECL
-    { 0x3ED2, 0xEA0A, WORD_LEN, 0 },  // DAC_LD_6_7
-    { 0x3ED4, 0x00A3, WORD_LEN, 0 },  // DAC_LD_8_9
-    { 0x3EDC, 0x6020, WORD_LEN, 0 },  // DAC_LD_16_17
-    { 0x3EE6, 0xA541, WORD_LEN, 0 },  // DAC_LD_26_27
-    { 0x31E0, 0x0000, WORD_LEN, 0 },  // PIX_DEF_ID
-    { 0x3ED0, 0x2409, WORD_LEN, 0 },  // DAC_LD_4_5
-    { 0x3EDE, 0x0A49, WORD_LEN, 0 },  // DAC_LD_18_19
-    { 0x3EE0, 0x4910, WORD_LEN, 0 },  // DAC_LD_20_21
-    { 0x3EE2, 0x09D2, WORD_LEN, 0 },  // DAC_LD_22_23
-    { 0x30B6, 0x0008, WORD_LEN, 0 },  // AUTOLR_CONTROL
-    { 0x337C, 0x0006, WORD_LEN, 0 },  // YUV_YCBCR_CONTROL
-    { 0x3E1A, 0xA582, WORD_LEN, 0 },  // SAMP_TX_BOOST
-    { 0x3E2E, 0xEC05, WORD_LEN, 0 },  // SAMP_SPARE
-    { 0x3EE6, 0xA5C0, WORD_LEN, 0 },  // DAC_LD_26_27
-    { 0x316C, 0xF43F, WORD_LEN, 0 },  // DAC_TXLO
-    { 0x316E, 0xC6FF, WORD_LEN, 0 },  // DAC_ECL
-};
-#endif
-
 static const struct mt9p111_i2c_reg_conf const AF_setting[] = {
-    { 0x098E, 0xB018, WORD_LEN, 0 },  // LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
-    { 0xC400, 0x88, BYTE_LEN, 0 },  // AFM_ALGO
-    { 0xC40A, 0x0010, WORD_LEN, 0 },  // AFM_POS_MIN
-    { 0xC40C, 0x00E8, WORD_LEN, 0 },  // AFM_POS_MAX
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-#if 0
-    { 0xC402, 0x00, BYTE_LEN, 0 },  // AFM_MODE
-#endif     
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
-
-    { 0xB045, 0x0015, WORD_LEN, 0 },  // AF_MODE_EX    //Div2-SW6-MM-MC-TouchAF-00+
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-#if 0    
-    { 0xB854, 0x66, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_X
-    { 0xB855, 0x66, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_Y
-    { 0xB856, 0x33, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_X
-    { 0xB857, 0x33, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_Y
-#else    
-    { 0xB854, 0x40, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_X
-    { 0xB855, 0x40, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_Y
-    { 0xB856, 0x80, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_X
-    { 0xB857, 0x80, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_Y
-#endif    
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
-  
-    { 0xB012, 0x09, BYTE_LEN, 0 },  // AF_FS_NUM_STEPS
-    { 0xB018, 0x00, BYTE_LEN, 0 },  // AF_FS_POS_0
-    { 0xB019, 0x18, BYTE_LEN, 0 },  // AF_FS_POS_1
-    { 0xB01A, 0x30, BYTE_LEN, 0 },  // AF_FS_POS_2
-    { 0xB01B, 0x48, BYTE_LEN, 0 },  // AF_FS_POS_3
-    { 0xB01C, 0x60, BYTE_LEN, 0 },  // AF_FS_POS_4
-    { 0xB01D, 0x80, BYTE_LEN, 0 },  // AF_FS_POS_5
-    { 0xB01E, 0xA0, BYTE_LEN, 0 },  // AF_FS_POS_6
-    { 0xB01F, 0xC0, BYTE_LEN, 0 },  // AF_FS_POS_7
-    { 0xB020, 0xE0, BYTE_LEN, 0 },  // AF_FS_POS_8
-    
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-#if 0    
-    { 0xB002, 0x0002, WORD_LEN, 0 },  // AF_MODE
-    { 0xB02C, 0x20, BYTE_LEN, 0 },  // AF_HC_STEP
-#else
-    { 0xB002, 0x0305, WORD_LEN, 0 },  // AF_MODE
-    //2nd_scan_option
-    { 0xB013, 0x55, BYTE_LEN, 0 },  // AF_FS_NUM_STEPS2
-    { 0xB014, 0x06, BYTE_LEN, 0 },  // AF_FS_STEP_SIZE    
-#endif
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
-  
-    { 0x8404, 0x05, BYTE_LEN, 300 },  // SEQ_CMD
-    //{ 0x8404, 0x05, BYTE_LEN, 0 },  // SEQ_CMD
-    //{ 0x8404, 0x00, BYTE_POLL, 0 },
-    { 0x3EDA, 0x6060, WORD_LEN, 0 },      // DAC_LD_14_15
-    { 0x0018, 0x2008, WORD_LEN, 100 },      // STANDBY_CONTROL_AND_STATUS
+	{ 0x098E, 0xC400, WORD_LEN, 0 },	// LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
+	{ 0xC400, 0x88, BYTE_LEN, 0 },  // AFM_ALGO
+	{ 0xC40A, 0x0048, WORD_LEN, 0 },  // AFM_POS_MIN
+	{ 0xC40C, 0x00E0, WORD_LEN, 0 },  // AFM_POS_MAX
+	{ 0xC402, 0x00, BYTE_LEN, 0 },  // AFM_MODE
+	{ 0xB854, 0x52, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_X
+	{ 0xB855, 0x58, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_Y
+	{ 0xB856, 0x5D, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_X
+	{ 0xB857, 0x5A, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_Y
+	{ 0xB012, 0x09, BYTE_LEN, 0 },  // AF_FS_NUM_STEPS
+	{ 0xB018, 0x00, BYTE_LEN, 0 },  // AF_FS_POS_0
+	{ 0xB019, 0x28, BYTE_LEN, 0 },  // AF_FS_POS_1
+	{ 0xB01A, 0x40, BYTE_LEN, 0 },  // AF_FS_POS_2
+	{ 0xB01B, 0x58, BYTE_LEN, 0 },  // AF_FS_POS_3
+	{ 0xB01C, 0x70, BYTE_LEN, 0 },  // AF_FS_POS_4
+	{ 0xB01D, 0x88, BYTE_LEN, 0 },  // AF_FS_POS_5
+	{ 0xB01E, 0xA0, BYTE_LEN, 0 },  // AF_FS_POS_6
+	{ 0xB01F, 0xB8, BYTE_LEN, 0 },  // AF_FS_POS_7
+	{ 0xB020, 0xD0, BYTE_LEN, 0 },  // AF_FS_POS_8
+	{ 0xB002, 0x0002, WORD_LEN, 0 },  // AF_MODE
+	{ 0xB02C, 0x20, BYTE_LEN, 0 },  // AF_HC_STEP
+	{ 0x8404, 0x05, BYTE_LEN, 300 }, 	// SEQ_CMD
+	//{ 0x8404, 0x05, BYTE_LEN, 0 }, 	// SEQ_CMD
+	//{ 0x8404, 0x00, BYTE_POLL, 0 },
+	{ 0x3EDA, 0x6060, WORD_LEN, 0 },      // DAC_LD_14_15
+	{ 0x0018, 0x2008, WORD_LEN, 100 },      // STANDBY_CONTROL_AND_STATUS
 };
-
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.++
-#if 0
-
-static const struct mt9p111_i2c_reg_conf const AF_MARCO_setting[] = {
-    //AF_VCM_enable
-    {0x098E, 0xC400, WORD_LEN, 0},         // LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
-    {0xC400, 0x88, BYTE_LEN, 0},       // AFM_ALGO
-    {0x8419, 0x05, BYTE_LEN, 0},        // SEQ_STATE_CFG_1_AF
-    {0xC400, 0x08, BYTE_LEN, 0},       // AFM_ALGO
-    //AF_settings
-    {0xB002, 0x0305, WORD_LEN, 0},         // AF_MODE
-    {0xB004, 0x0002, WORD_LEN, 0},         // AF_ALGO
-    {0xB008, 0x0003, WORD_LEN, 0},
-    {0xB00A, 0xFFFF, WORD_LEN, 0},
-    {0xB00C, 0xFFFF, WORD_LEN, 0},
-    {0xB00E, 0xFFFF, WORD_LEN, 0},      
-    //set_posMin/Max
-    {0xC40A, 0x0068, WORD_LEN, 0},         // AFM_POS_MIN
-    {0xC40C, 0x00FF, WORD_LEN, 0},         // AFM_POS_MAX
-    //AF_postition_settings
-    {0xB018, 0x78, BYTE_LEN, 0},       // AF_FS_POS_0
-    {0xB019, 0x81, BYTE_LEN, 0},       // AF_FS_POS_1
-    {0xB01A, 0x8A, BYTE_LEN, 0},      // AF_FS_POS_2
-    {0xB01B, 0x93, BYTE_LEN, 0},       // AF_FS_POS_3
-    {0xB01C, 0x9C, BYTE_LEN, 0},      // AF_FS_POS_4
-    {0xB01D, 0xA5, BYTE_LEN, 0},      // AF_FS_POS_5
-    {0xB01E, 0xAE, BYTE_LEN, 0},      // AF_FS_POS_6
-    {0xB01F, 0xB7, BYTE_LEN, 0},       // AF_FS_POS_7
-    {0xB020, 0xC0, BYTE_LEN, 0},       // AF_FS_POS_8
-    {0xB021, 0xC9, BYTE_LEN, 0},       // AF_FS_POS_9
-    {0xB022, 0xD2, BYTE_LEN, 0},      // AF_FS_POS_10
-    {0xB023, 0xDB, BYTE_LEN, 0},      // AF_FS_POS_11
-    {0xB024, 0xE4, BYTE_LEN, 0},       // AF_FS_POS_12
-    {0xB025, 0xED, BYTE_LEN, 0},      // AF_FS_POS_13
-    {0xB026, 0xF6, BYTE_LEN, 0},       // AF_FS_POS_14
-    {0xB027, 0xFD, BYTE_LEN, 0},      // AF_FS_POS_15 
-    {0xB012, 0x0F, BYTE_LEN, 0},       // AF_FS_NUM_STEPS
-    {0xB014, 0x09, BYTE_LEN, 0},       // AF_FS_STEP_SIZE
-    {0x8404, 0x05, BYTE_LEN, 0},        // SEQ_CMD
-    {0x3EDA, 0x6060, WORD_LEN, 0},       // DAC_LD_14_15
-    {0x0018, 0x2008, WORD_LEN, 100},   // STANDBY_CONTROL_AND_STATUS
-};
-
-#else
-
-static const struct mt9p111_i2c_reg_conf const AF_MARCO_setting[] = {      
-    //set_posMin/Max
-    {0x098E, 0xC40A, WORD_LEN, 0},         // LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
-    {0xC40A, 0x0070, WORD_LEN, 0},         // AFM_POS_MIN
-    {0xC40C, 0x00E8, WORD_LEN, 0},         // AFM_POS_MAX
-    {0x8404, 0x05, BYTE_LEN, 0},        // SEQ_CMD
-    {0x3EDA, 0x6060, WORD_LEN, 0},       // DAC_LD_14_15
-    {0x0018, 0x2008, WORD_LEN, 100},   // STANDBY_CONTROL_AND_STATUS
-};
-#endif
-//[HUAWEI.B-2136] FIHTDC, 20110826, AnvoiYTLiu change AF Mode to Fullscan,and change fastAF wrong patch. The new patch from MCNEX Jerry Yen.--
 
 static const struct mt9p111_i2c_reg_conf const aftrigger_tbl[] = {
 	{ 0x098E, 0xB006, WORD_LEN, 0 }, 	// LOGICAL_ADDRESS_ACCESS [AF_PROGRESS]
@@ -3060,21 +2152,12 @@ static const struct mt9p111_i2c_reg_conf const EF_SOLARIZE_setting[] = {
     { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*
 };
 
-static const struct mt9p111_i2c_reg_conf const EXP_AVERAGE_setting[] = {
+static const struct mt9p111_i2c_reg_conf const EXP_NORMAL_setting[] = {
     { 0x098E, 0xB820, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS
     { 0xB820, 0x14, BYTE_LEN, 0 },	// STAT_AE_WINDOW_POS_X
     { 0xB821, 0x14, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
     { 0xB822, 0xD2, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
     { 0xB823, 0xD2, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
-    { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
-};
-
-static const struct mt9p111_i2c_reg_conf const EXP_NORMAL_setting[] = {
-    { 0x098E, 0xB820, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS
-    { 0xB820, 0x55, BYTE_LEN, 0 },	// STAT_AE_WINDOW_POS_X
-    { 0xB821, 0x55, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
-    { 0xB822, 0x5A, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
-    { 0xB823, 0x5A, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
     { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
 };
 
@@ -3084,6 +2167,15 @@ static const struct mt9p111_i2c_reg_conf const EXP_SPOT_setting[] = {
     { 0xB821, 0x66, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
     { 0xB822, 0x33, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
     { 0xB823, 0x33, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
+    { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
+};
+
+static const struct mt9p111_i2c_reg_conf const EXP_AVERAGE_setting[] = {
+    { 0x098E, 0xB820, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS
+    { 0xB820, 0x26, BYTE_LEN, 0 },	// STAT_AE_WINDOW_POS_X
+    { 0xB821, 0x26, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
+    { 0xB822, 0xB5, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
+    { 0xB823, 0xB5, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
     { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
 };
 
@@ -3155,7 +2247,7 @@ static const struct mt9p111_i2c_reg_conf const SHARP_P2_setting[] = {
 static const struct mt9p111_i2c_reg_conf const WB_AUTO_setting[] = {
 	{ 0x098E, 0xACB0, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS [AWB_MIN_ACCEPTED_PRE_AWB_R2G_RATIO]
 	{ 0xACB0, 0x31, BYTE_LEN, 0 }, // AWB_RG_MIN
-	{ 0xACB1, 0x60, BYTE_LEN, 0 }, // AWB_RG_MAX
+	{ 0xACB1, 0x5B, BYTE_LEN, 0 }, // AWB_RG_MAX
 	{ 0xACB4, 0x2A, BYTE_LEN, 0 }, // AWB_BG_MIN
 	{ 0xACB5, 0x5B, BYTE_LEN, 0 }, // AWB_BG_MAX
 	{ 0xACB2, 0x3C, BYTE_LEN, 0 }, // AWB_RG_MIN_BRIGHT
@@ -3314,8 +2406,7 @@ struct mt9p111_reg mt9p111_regs = {
 	.context_b_to_a_tbl = context_b_to_a_tbl,
 	.context_b_to_a_tbl_size = ARRAY_SIZE(context_b_to_a_tbl),	
 	.aftbl = AF_setting,
-	.aftbl_size = ARRAY_SIZE(AF_setting),
-	.marcoaftbl=AF_MARCO_setting,
+	.aftbl_size = ARRAY_SIZE(AF_setting),	
 	.ab_off_tbl = AB_OFF_setting,
 	.ab_off_tbl_size = ARRAY_SIZE(AB_OFF_setting),
 	.ab_60mhz_tbl = AB_60MHZ_setting,

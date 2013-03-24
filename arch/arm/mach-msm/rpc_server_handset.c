@@ -306,7 +306,6 @@ void report_hs_key(uint32_t key_code, uint32_t key_parm)
 //SW5-Kernel-JC-Workaround_timing-]
 */
 		input_report_key(hs->ipdev, key, (key_code != HS_REL_K));
-		
 		break;
 	case SW_HEADPHONE_INSERT:
 		report_headset_switch(hs->ipdev, key, (key_code != HS_REL_K));
@@ -667,7 +666,7 @@ static int __devinit hs_probe(struct platform_device *pdev)
 		dev_err(&ipdev->dev, "rpc init failure\n");
 		goto err_hs_rpc_init;
 	}
-	
+
 	return 0;
 
 err_hs_rpc_init:

@@ -59,6 +59,19 @@
 #define DIAG_IOCTL_GET_PART_TABLE_FROM_SMEM  13
 //Div2D5-LC-BSP-Porting_OTA_SDDownload-00 +]
 
+//Mig-Added for Slate Application support
+#define DIAG_IOCTL_GET_RSSI                 14
+#define DIAG_IOCTL_GET_STATE_AND_CONN_INFO  15
+//Shashi added for Slate command support FXPCAYM81
+#define DIAG_IOCTL_GET_KEY_EVENT_MASK  16
+#define DIAG_IOCTL_GET_PEN_EVENT_MASK  17
+//Shashi added for Slate command support FXPCAYM81 ends here
+
+// Ketan-Added for FTM Application Support - FXPCAYM-87
+#define DIAG_IOCTL_GET_SEARCHER_DUMP        18
+#define DIAG_IOCTL_READ_DMSS_STATUS         19
+#define DIAG_IOCTL_SEND_DMSS_STATUS         20
+#define DIAG_IOCTL_RESTORE_LOGGING_MASKS    21
 
 struct bindpkt_params {
 	uint16_t cmd_code;

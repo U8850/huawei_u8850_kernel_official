@@ -3,7 +3,7 @@ ifeq ($(GCC_VERSION),0404)
 CFLAGS_REMOVE_msm_vfe8x.o = -Wframe-larger-than=1024
 endif
 
-obj-$(CONFIG_MSM_CAMERA) += msm_camera.o msm_v4l2.o msm_axi_qos.o fih_camera_parameter.o fih_camera_power.o
+obj-$(CONFIG_MSM_CAMERA) += msm_camera.o msm_axi_qos.o fih_camera_parameter.o fih_camera_power.o
 obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
 obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x.o msm_io7x.o
 obj-$(CONFIG_ARCH_MSM7X30) += msm_vfe31.o msm_io_vfe31.o msm_vpe1.o
@@ -22,7 +22,7 @@ obj-$(CONFIG_FIH_HM0357) += hm0357.o hm0357_reg.o
 else
 ifeq ($(CONFIG_FIH_PROJECT_SF4V5),y)
 obj-$(CONFIG_FIH_MT9P111) += mt9p111.o mt9p111_reg_sf5.o
-obj-$(CONFIG_FIH_HM0357) += hm0357.o hm0357_reg_sf5.o
+obj-$(CONFIG_FIH_HM0357) += hm0357.o hm0357_reg.o
 else
 obj-$(CONFIG_FIH_MT9P111) += mt9p111.o mt9p111_reg.o
 obj-$(CONFIG_FIH_HM0357) += hm0357.o hm0357_reg.o

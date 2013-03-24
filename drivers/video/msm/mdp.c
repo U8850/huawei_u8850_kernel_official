@@ -924,14 +924,8 @@ void mdp_hw_version(void)
 	mdp_hw_revision = *hp;
 	iounmap(cp);
 
-	#ifndef CONFIG_FB_MSM_MDDI
 	mdp_hw_revision >>= 28;	/* bit 31:28 */
 	mdp_hw_revision &= 0x0f;
-	#else
-	//2011/7/21 11:38, Dio: Patch for KPI issue related with MDP
-	mdp_hw_revision = MDP4_REVISION_V2;
-	//
-	#endif
 
 	printk(KERN_INFO "%s: mdp_hw_revision=%x\n",
 				__func__, mdp_hw_revision);
@@ -971,8 +965,8 @@ static int mdp_irq_clk_setup(void)
 //SW2-6-MM-JH-MDP_CLK-00+
 #ifdef CONFIG_FB_MSM_LCDC
     /* FIHTDC-Div2-SW2-BSP, Ming { */
-    /* If LCDC was already enabled in APPSBOOT,
-        we should not set MDP_CLK again.
+    /* If LCDC was already enabled in APPSBOOT, 
+        we should not set MDP_CLK again. 
      */
 	if (!(inpdw(MDP_BASE + 0xC0000) & 0x01)) { /* lcdc not yet enabled */
 		if (mdp_pdata && mdp_pdata->mdp_core_clk_rate)

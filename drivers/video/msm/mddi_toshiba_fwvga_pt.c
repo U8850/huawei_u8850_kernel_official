@@ -223,44 +223,6 @@ static struct init_table NT35560_TOSHIBA_init_table[] = {
         { 0, 0 },
 };
 
-//SW2-6-MM-JH-PCR_init_table-00+
-static struct init_table NT35560_TOSHIBA_PCR_init_table[] = {
-/* FIH-Div2-SW2-BSP, Ming, Power-on Sequence { */
-#if 1
-        { 0, 120 },          // Wait for 120ms      
-        { 0x1100, 0x0000 },  // EXIT_SLEEP_MODE: Exit the Sleep-In Mode
-        { 0, 120 },          // Wait for 120ms   
-        { 0x3500, 0x0000 },  // SET_TEAR_ON: Tearing Effect Line ON
-        { 0x4400, 0x0000 },  // SET_TEAR_SCANLINE
-        { 0x4401, 0x0000 },  // SET_TEAR_SCANLINE
-        { 0x3600, 0x00D4 },  // SET_ADDRESS_MODE: MY = 1, MX = 1, ML = 1, MH = 1
-        { 0, 10 },           // Wait for 10ms
-        { 0x5100, 0x0000 },  // WRDISBV: Write Display Brightness
-        { 0x5300, 0x0000 },  // WRCTRLD: Write CTRL Display
-        { 0, 10 },           // Wait for 10ms
-		{ 0x2900, 0x0000 },  // SET_DISPLAY_ON
-        { 0, 0 },
-#else
-        { 0, 120 },          // Wait for 120ms
-        { 0x3500, 0x0000 },  // SET_TEAR_ON: Tearing Effect Line ON
-        { 0x4400, 0x0000 },  // SET_TEAR_SCANLINE
-        { 0x4401, 0x0000 },  // SET_TEAR_SCANLINE
-//SW2-6-MM-JH-SET_ADDRESS_MODE-00+
-        { 0x3600, 0x00D4 },  // SET_ADDRESS_MODE: MY = 1, MX = 1, ML = 1, MH = 1
-//SW2-6-MM-JH-SET_ADDRESS_MODE-00-
-        { 0x5100, 0x0000 },  // WRDISBV: Write Display Brightness
-/*Div2-SW6-SC-Panel_Init_timing-00+{*/
-        { 0x5300, 0x0000 },  // WRCTRLD: Write CTRL Display
-        { 0, 10 },           // Wait for 10ms
-        { 0x1100, 0x0000 },  // EXIT_SLEEP_MODE: Exit the Sleep-In Mode
-/*Div2-SW6-SC-Panel_Init_timing-00+}*/
-        { 0, 120 },
-        { 0, 0 },
-#endif
-/* } FIH-Div2-SW2-BSP, Ming, Power-on Sequence */
-};
-//SW2-6-MM-JH-PCR_init_table-00-
-
 void panel_init(struct init_table *init_table)
 {
     unsigned int n;
@@ -291,19 +253,15 @@ static int mddi_toshiba_fwvga_lcd_on(struct platform_device *pdev)
 {
     printk(KERN_INFO "MDDI: mddi_toshiba_fwvga_lcd_on\n");
 
-//SW2-6-MM-JH-mddi_host_client_cnt_reset-00+
-    mddi_host_client_cnt_reset();
-//SW2-6-MM-JH-mddi_host_client_cnt_reset-00-
-
 //SW2-6-MM-JH-Panel_first_on-00+
-    if ( !panel_first_on ) {     		 
+    if ( !panel_first_on ) {
         // LCM_RESET -> Low
         printk(KERN_INFO "Set GPIO %d: %d -> 0\n", GPIO_LCM_RESET, gpio_get_value(GPIO_LCM_RESET));
         gpio_set_value(GPIO_LCM_RESET, 0); // GPIO_LCM_RESET = 35
         printk(KERN_INFO "GPIO %d = %d\n", GPIO_LCM_RESET, gpio_get_value(GPIO_LCM_RESET));
     }
-    
- // PM8058_L15_V2P85
+
+    // PM8058_L15_V2P85
     vreg_set_level(vreg_gp6, 2800);  // VDD
     vreg_enable(vreg_gp6);
 
@@ -311,35 +269,22 @@ static int mddi_toshiba_fwvga_lcd_on(struct platform_device *pdev)
     vreg_set_level(vreg_lvsw1, 1800);  // VDDIO
     vreg_enable(vreg_lvsw1);
 
-     mdelay(20);
+    mdelay(1);
 
     if ( !panel_first_on ) {
-    	// for SFXG {{
-#ifdef CONFIG_FIH_PROJECT_SF4V5    	
-    	  gpio_set_value(GPIO_LCM_RESET, 1); // GPIO_LCM_RESET = 35
-    	  mdelay(5);
-    	
-    	  gpio_set_value(GPIO_LCM_RESET, 0); // GPIO_LCM_RESET = 35
-    	  mdelay(5);	  
-#endif    	  
-    	// }} for SFXG
         // LCM_RESET -> High
         printk(KERN_INFO "Set GPIO %d: %d -> 1\n", GPIO_LCM_RESET, gpio_get_value(GPIO_LCM_RESET));
         gpio_set_value(GPIO_LCM_RESET, 1);
         printk(KERN_INFO "GPIO %d = %d\n", GPIO_LCM_RESET, gpio_get_value(GPIO_LCM_RESET));
 
-//SW2-6-MM-JH-PCR_init_table-00+
-        if ( fih_get_product_phase() <= Product_PR2 ) {
-            panel_init(NT35560_TOSHIBA_init_table);
-        } else {
-            panel_init(NT35560_TOSHIBA_PCR_init_table);
-        }
-//SW2-6-MM-JH-PCR_init_table-00-
+        mdelay(15);
+
+        panel_init(NT35560_TOSHIBA_init_table);
     }
-    
+
     panel_first_on = 0;
 //SW2-6-MM-JH-Panel_first_on-00-
-  
+
     return 0;
 }
 
@@ -350,18 +295,16 @@ static int mddi_toshiba_fwvga_lcd_off(struct platform_device *pdev)
     mddi_queue_register_write( 0x2800, 0x0000, FALSE, 0);  // SET_DISPLAY_OFF
     mddi_queue_register_write( 0x1000, 0x0000, FALSE, 0);  // ENTER_SLEEP_MODE
     mddi_wait(70);
-    
+
     // LCM_RESET -> Low
     gpio_set_value(GPIO_LCM_RESET, 0);
-       
+
     // PM8058_LVS1_V1P8
     vreg_disable(vreg_lvsw1);
 
     // PM8058_L15_V2P85
     vreg_disable(vreg_gp6);
-    
-    //mddi_wait(120); // TODO: Ensure the VCI off?
-    
+
     return 0;
 }
 
@@ -420,11 +363,7 @@ static void mddi_toshiba_fwvga_lcd_set_backlight(struct msm_fb_data_type *mfd)
     mddi_queue_register_write( 0x22C0, 0x0004, FALSE, 0);  // ABC CTRL11: PWMDIV; PWMDIV[7:0] = 4; PWM Frequency = 19531.3
     mddi_queue_register_write( 0x5300, 0x0036, FALSE, 0);  // WRCTRLD: Write CTRL Display; BCTRL=1, A=1,BL=1, DB=1
 //SW2-6-MM-JH-PWM-00+
-#ifndef CONFIG_FIH_PROJECT_SF4V5
     mddi_queue_register_write( 0x71C0, PWM[mfd->bl_level], FALSE, 0);  // CABC_FORCE
-#else    
-    mddi_queue_register_write( 0x71C0, mfd->bl_level, FALSE, 0); //FihtdcCode@20110825 HCLai modify for screen off flicker issue
-#endif    
 //SW2-6-MM-JH-PWM-00-
     mddi_queue_register_write( 0x18C0, 0x0005, FALSE, 0);  // ABC_CTRL1(FORCE_LABC, LENONR, FORCE_CABC_PWM)
 }
@@ -529,11 +468,7 @@ static int __init mddi_toshiba_fwvga_init(void)
         printk(KERN_INFO "MDDI: pinfo->clk_rate = %d\n", pinfo->clk_rate);
 //SW2-6-MM-JH-VSYNC-00-
 
-#ifndef CONFIG_FIH_PROJECT_SF4V5
         pinfo->bl_max = 10;
-#else        
-        pinfo->bl_max = 255;    //FihtdcCode@20110825 HCLai modify for screen off flicker issue
-#endif        
         pinfo->bl_min = 1;
 //SW2-6-MM-JH-Backlight_PWM-01+
         pinfo->bl_regs.bl_type = BL_TYPE_PWM;

@@ -89,8 +89,9 @@
  * REGULATION_OUT Regulator output is out of regulation.
  * FAIL           Regulator output has failed.
  * OVER_TEMP      Regulator over temp.
- * FORCE_DISABLE  Regulator shut down by software.
+ * FORCE_DISABLE  Regulator forcibly shut down by software.
  * VOLTAGE_CHANGE Regulator voltage changed.
+ * DISABLE        Regulator was disabled.
  *
  * NOTE: These events can be OR'ed together when passed into handler.
  */
@@ -102,6 +103,7 @@
 #define REGULATOR_EVENT_OVER_TEMP		0x10
 #define REGULATOR_EVENT_FORCE_DISABLE		0x20
 #define REGULATOR_EVENT_VOLTAGE_CHANGE		0x40
+#define REGULATOR_EVENT_DISABLE 		0x80
 
 struct regulator;
 
@@ -112,6 +114,10 @@ struct regulator;
  *            using the bulk regulator APIs.
  * @consumer: The regulator consumer for the supply.  This will be managed
  *            by the bulk API.
+ * @min_uV:   The minimum requested voltage for the regulator (in microvolts),
+ *            or 0 to not set a voltage.
+ * @max_uV:   The maximum requested voltage for the regulator (in microvolts),
+ *            or 0 to use @min_uV.
  *
  * The regulator APIs provide a series of regulator_bulk_() API calls as
  * a convenience to consumers which require multiple supplies.  This
@@ -120,6 +126,8 @@ struct regulator;
 struct regulator_bulk_data {
 	const char *supply;
 	struct regulator *consumer;
+	int min_uV;
+	int max_uV;
 };
 
 #if defined(CONFIG_REGULATOR)

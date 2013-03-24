@@ -21,15 +21,6 @@
 
 static void (*current_time)(int *sec, int *msec) = NULL;
 
-//Div2D5-OwenHuang-Geomagnetic_Deadlock_In_WorkQueue-00+{
-#undef DEBUG_TRACE //Trace Debug Message On/Off
-#ifdef DEBUG_TRACE
-#define TRACE_MSENSOR(n) do { printk(KERN_INFO "%s: %d\n", __func__, n); }while(0) 
-#else
-#define TRACE_MSENSOR(n) do { } while(0)
-#endif
-//Div2D5-OwenHuang-Geomagnetic_Deadlock_In_WorkQueue-00+}
-
 //Div2D5-OwenHuang-FB0_Sensors-Porting_New_Sensors_Architecture-00+{
 STATIC int config_yas529_gpio(void)
 {
@@ -2566,9 +2557,7 @@ static int
 geomagnetic_enable(struct geomagnetic_data *data)
 {
     if (!atomic_cmpxchg(&data->enable, 0, 1)) {
-		TRACE_MSENSOR(0);
         schedule_delayed_work(&data->work, 0);
-		TRACE_MSENSOR(1);
     }
 
     return 0;
@@ -2652,26 +2641,21 @@ geomagnetic_enable_store(struct device *dev,
     if (hwdep_driver.set_enable == NULL) {
         return -ENOTTY;
     }
-	TRACE_MSENSOR(0);
+
     if (geomagnetic_multi_lock() < 0) {
         return count;
     }
 
     if (value) {
         hwdep_driver.set_enable(value);
-		TRACE_MSENSOR(1);
         geomagnetic_enable(data);
-		TRACE_MSENSOR(2);
     }
     else {
-		TRACE_MSENSOR(3);
         geomagnetic_disable(data);
-		TRACE_MSENSOR(4);
         hwdep_driver.set_enable(value);
     }
-	TRACE_MSENSOR(5);
+
     geomagnetic_multi_unlock();
-	TRACE_MSENSOR(6);
 
     return count;
 }
@@ -3074,13 +3058,9 @@ geomagnetic_input_work_func(struct work_struct *work)
 
             hwdep_driver.ioctl(YAS529_IOC_GET_DRIVER_STATE,
                             (unsigned long) &state);
-			TRACE_MSENSOR(0);
-            //geomagnetic_multi_lock(); //Div2D5-OwenHuang-Geomagnetic_Deadlock_In_WorkQueue-00-
-            TRACE_MSENSOR(1);
+            geomagnetic_multi_lock();
             data->driver_state = state;
-			TRACE_MSENSOR(2);
-            //geomagnetic_multi_unlock(); //Div2D5-OwenHuang-Geomagnetic_Deadlock_In_WorkQueue-00-
-            TRACE_MSENSOR(3);
+            geomagnetic_multi_unlock();
 
             /* report event */
             code |= (rt & YAS529_REPORT_OVERFLOW_OCCURED);

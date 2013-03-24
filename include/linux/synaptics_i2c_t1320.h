@@ -23,7 +23,7 @@
 //vreg L12 - 3V
 //vreg L8 - 1.8(I2C)
 
-//#define GPIO_TP_INT_N               42	// GPIO 42, TP INT pin, low active
+#define GPIO_TP_INT_N               42	// GPIO 42, TP INT pin, low active
 #define GPIO_TP_RST_N               56	// GPIO 56, TP Reset pin
 
 #define LOW                         0
@@ -113,7 +113,7 @@ int REG_F01_QUERY;	// FW ver.
 #define REG_MAX_X	REG_F11_CTRL+6
 #define REG_MAX_Y	REG_F11_CTRL+8
 #define REG_2D_DATA	REG_F11_DATA
-#define REG_PALM_DET	REG_F11_DATA+27
+#define REG_PALM_DET	REG_F11_DATA+11
 
 #define REG_INT_STATUS	REG_F01_DATA+1	//bit[3:0] = Button:Abs0(touch):Status:Flash
 #define REG_SLEEP_MODE	REG_F01_CTRL

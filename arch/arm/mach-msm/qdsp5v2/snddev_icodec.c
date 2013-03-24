@@ -1230,7 +1230,6 @@ static int snddev_icodec_open(struct msm_snddev_info *dev_info)
 			rc = -EBUSY;
 			goto error;
 		}
-
 		rc = snddev_icodec_open_tx(icodec);
 
 		if (!IS_ERR_VALUE(rc)) {

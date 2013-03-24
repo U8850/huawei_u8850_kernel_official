@@ -140,7 +140,7 @@ dump_status(uint32_t status)
 	printk("\n");
 }
 #endif
-/*
+
 #ifdef CONFIG_FIH_FTM
 static void
 dump_status1(uint32_t status)
@@ -167,13 +167,10 @@ dump_status1(uint32_t status)
 	printk("\n");
 }
 #endif
-*/
+
 static irqreturn_t
 msm_i2c_interrupt(int irq, void *devid)
 {
-#ifdef CONFIG_FIH_FTM
-	int i = 0;
-#endif
 	struct msm_i2c_dev *dev = devid;
 	uint32_t status = readl(dev->base + I2C_STATUS);
 	int err = 0;
@@ -184,10 +181,7 @@ msm_i2c_interrupt(int irq, void *devid)
 
 #ifdef CONFIG_FIH_FTM
 	if (i2c_elan_touch_update)
-	{
-//		dump_status1(status);
-		for (i=0;i<100;i++);
-	}
+		dump_status1(status);
 #endif
 
 	spin_lock(&dev->lock);

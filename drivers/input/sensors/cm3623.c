@@ -76,7 +76,7 @@ enum
 	TOTAL_VERSION,
 };
 
-#define WORD_MODE 1 //Div2D5-OwenHuang-SF8_Chnage_ALS_Resolution-00+
+#define WORD_MODE 0 //Div2D5-OwenHuang-SF8_Chnage_ALS_Resolution-00+
 
 typedef struct
 {
@@ -125,48 +125,6 @@ static unsigned char current_ps_sensivity = 0; //Div2D5-OwenHuang-SF8_CM3623_Sen
 //Div2D5-OwenHuang-ALSPS-CM3623_FTM_Porting-01+}
 
 static int cm3623_init_chip(void); //Div2D5-OwenHuang-SF8_ALSPS_Threshold-00+
-
-
-//Div2D5-OwenHuang-SF5_ALSPS_Fine_Tune-01+{
-#ifndef CONFIG_FIH_FTM
-struct mapping_table{
-	int value;
-	int mapping_value;
-};
-
-#define TABLE_SIZE 4
-static struct mapping_table cm3623_als_table[TABLE_SIZE] = {
-		[0] = {30,  1},
-		[1] = {150, 2},
-		[2] = {300, 3},
-		[3] = {450, 4},
-};
-
-static int cm3623_als_mapping(int value);
-static int cm3623_als_mapping(int value)
-{
-	int i;
-	int min = 0;
-	int max;
-
-	for (i = 0; i < TABLE_SIZE; i++)
-	{
-		max = cm3623_als_table[i].value;
-
-		if (value >= min && value < max)
-			return cm3623_als_table[i].mapping_value;
-
-		min = cm3623_als_table[i].value;
-	}
-
-	if (min == cm3623_als_table[TABLE_SIZE - 1].value)
-		return (TABLE_SIZE + 1);
-	else 
-		return 0;
-}
-#endif
-//Div2D5-OwenHuang-SF5_ALSPS_Fine_Tune-01+}
-
 
 static int suspend(int);
 static int resume(int);
@@ -250,8 +208,8 @@ static int cm_i2c_read_byte(struct i2c_client *client, int addr, char *data)
 
 //Div2D5-OwenHuang-SF8_ALSPS_Threshold-00+{
 //als sensor settings
-#define GAIN_ALS 0x03 << 6 //Div2D5-OwenHuang-SF5_ALSPS_Fine_Tune-01*
-#define THD_ALS  0x03 << 4 //Div2D5-OwenHuang-SF5_ALSPS_Fine_Tune-01*
+#define GAIN_ALS 0x03 << 6
+#define THD_ALS  0x00 << 4
 #define IT_ALS   0x00 << 2
 #define WDM      0x01 << 1
 #define SD_ALS   0x00 << 0 
@@ -263,18 +221,8 @@ static int cm_i2c_read_byte(struct i2c_client *client, int addr, char *data)
 #endif
 //Div2D5-OwenHuang-SF8_Chnage_ALS_Resolution-00+}
 
-//Div2D5-OwenHuang-SF8_ALSPS_Fine_Tune-02*{
 //proximity sensor settings
-#ifdef CONFIG_FIH_FTM //for FTM mode
-#define PS_INT_THRESHOLD 0x06 //for FTM used
-#else //for Android OS mode
-#ifdef CONFIG_FIH_PROJECT_SF8
-#define PS_INT_THRESHOLD 0x06 //enable P sensor
-#else
-#define PS_INT_THRESHOLD 0xFF //disable P sensor
-#endif 
-#endif
-//Div2D5-OwenHuang-SF8_ALSPS_Fine_Tune-02*}
+#define PS_INT_THRESHOLD 0x16 //5CM, see the spec, page13
 static int cm3623_init_chip(void)
 {
 	int ret = 0;
@@ -382,9 +330,7 @@ resume(int type)
 		{
         	LOGE("light sensor - i2c transfer failed");
         }
-        //Anthony Light Sensor Error Debug 2011.07.07{
-        msleep(150); 
-        //Anthony Light Sensor Error Debug 2011.07.07}
+		
         data = input_get_drvdata(this_als_data);
 		schedule_delayed_work(&data->work, 
 			delay_to_jiffies(data->delay) + 1);
@@ -432,13 +378,8 @@ static void als_work_func(struct work_struct *work)
 
 	//Div2D5-OwenHuang-SF8_Enable_Auto_Backlight-00+{
 	//skip the first it and second unit
-	#ifdef CONFIG_FIH_FTM
-	lux_value = (int)(((int)(((int)buf[0])<<8 | ((int)buf[1])))); //AnthonyHsueh Light Sensor for FTM (Lux)
-	#else
-	lux_value = (int)(((int)(((int)buf[0])<<8 | ((int)buf[1])))); //AnthonyHsueh Light Sensor for OS (Level)
-	lux_value = cm3623_als_mapping(lux_value); 
-	#endif
-	//lux_value *= 50; //Div2D5-OwenHuang-SF5_ALSPS_Fine_Tune-01-
+	lux_value = (int)(((int)(((int)buf[0])<<8 | ((int)buf[1]))) / 100);
+	lux_value *= 100;
 	//Div2D5-OwenHuang-SF8_Enable_Auto_Backlight-00+}
 #else
 	ret = cm_i2c_read_byte(this_client, i2c_set[i2c_set_index].i2c_table[ALS_CMD_I2C_ADDR], &buf[0]);
@@ -889,7 +830,7 @@ static struct device_attribute ps_dev_attr_data = __ATTR(data, S_IRUGO, ps_data_
 static struct device_attribute ps_dev_attr_status = __ATTR(status, S_IRUGO, ps_status_show, NULL);
 static struct device_attribute ps_dev_attr_phone = __ATTR(phone, S_IWUSR|S_IWGRP, NULL, ps_phone_store);
 //Div2D5-OwenHuang-SF8_CM3623_Sensivity_Node-00+{
-static struct device_attribute ps_dev_attr_sensivity = __ATTR(sensivity, S_IRUGO|S_IWUSR, //Div2D5-OwenHuang-SF8_FQC_PSensor_Sensivity-00*
+static struct device_attribute ps_dev_attr_sensivity = __ATTR(sensivity, S_IWUGO|S_IRUGO|S_IWUSR|S_IWGRP, //Div2D5-OwenHuang-SF8_FQC_PSensor_Sensivity-00*
 																ps_sensivity_show, ps_sensivity_store);
 //Div2D5-OwenHuang-SF8_CM3623_Sensivity_Node-00+}
 

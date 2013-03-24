@@ -502,20 +502,12 @@ static struct miscdevice adb_device = {
 	.fops = &adb_fops,
 };
 
-
-extern int msm_do_usb_dbg(void);    //Div6-D1-JL-AddUSBDbgInfo+
-
 static int adb_enable_open(struct inode *ip, struct file *fp)
 {
 	if (atomic_inc_return(&adb_enable_excl) != 1) {
 		atomic_dec(&adb_enable_excl);
 		return -EBUSY;
 	}
-
-    //Div6-D1-JL-AddUSBDbgInfo+{
-    if(msm_do_usb_dbg() == 1)
-        usleep(100);
-    //Div6-D1-JL-AddUSBDbgInfo+}
 
 	printk(KERN_INFO "enabling adb\n");
 	android_enable_function(&_adb_dev->function, 1);
@@ -526,12 +518,6 @@ static int adb_enable_open(struct inode *ip, struct file *fp)
 static int adb_enable_release(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "disabling adb\n");
-
-    //Div6-D1-JL-AddUSBDbgInfo+{
-    if(msm_do_usb_dbg() == 1)
-        usleep(100);
-    //Div6-D1-JL-AddUSBDbgInfo+}
-    
 	android_enable_function(&_adb_dev->function, 0);
 	atomic_dec(&adb_enable_excl);
 	return 0;

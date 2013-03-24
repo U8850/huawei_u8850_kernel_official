@@ -94,6 +94,7 @@ typedef struct {
 * field is unchanged from previous usage.
 *--------------------------------------------------------------------------*/
 #define NV_ERR_FATAL_OPTIONS_I    905
+#define NV_DETECT_HW_RESET_I	4399	//SW2-5-1-MP-DbgCfgTool-01+
 #define ACTION_MASK  0x0000000F
 static unsigned int error_fatal_option = 0;
 static int error_fatal_option_has_initialized = 0;
@@ -440,6 +441,71 @@ int DbgCfgSetErrorAction(int value)
 }
 //Div6-PT2-Core-BH-DbgCfgToolPorting-01+]
 
+//SW2-5-1-MP-DbgCfgTool-01+[
+/*--------------------------------------------------------------------------*
+ * Function    : DbgCfgSetDetectHWRese
+ *
+ * Description :
+ *     Write the enable HW Reset detection flag to NV item #4399.
+ *
+ * Parameters  :
+ *
+ *     value - 0:enable ; 1:disable
+ *
+ * Return value: integer
+ *     Zero     - Successful
+ *     Not zero - Fail
+ *--------------------------------------------------------------------------*/
+int DbgCfgSetDetectHWReset(int value)
+{
+    int ret = -1;
+
+    struct msm_rpc_endpoint *nv_ep;
+    error_action_req req;
+    error_action_rep rep;
+
+    nv_ep = msm_rpc_connect(NVPROG, NVVERS, 0);
+
+    if (IS_ERR(nv_ep)) 
+    {
+        printk(KERN_ERR "[dbgcfgtool] %s() LINE:%d, init rpc failed! error: %ld\n", __func__, __LINE__, PTR_ERR(nv_ep));
+        return -EINVAL;
+    }
+
+    req.cmd = cpu_to_be32(NV_WRITE_F);
+    req.item = cpu_to_be32(NV_DETECT_HW_RESET_I);
+    req.more_data = cpu_to_be32(1);
+    req.disc = cpu_to_be32(NV_DETECT_HW_RESET_I);
+    req.data = cpu_to_be32(value);
+
+    ret = msm_rpc_call_reply (nv_ep,
+        ONCRPC_NV_CMD_REMOTE_PROC,
+        &req,
+        sizeof (req),
+        &rep,
+        sizeof (rep),
+        5 * HZ);
+
+    if (ret < 0)
+    {
+        printk(KERN_ERR "[dbgcfgtool] %s() LINE:%d, rpc call failed! (%d)\n", __func__, __LINE__, ret);
+    }
+    else if (be32_to_cpu(rep.retval) != NV_DONE_S)
+    {
+        printk(KERN_ERR "[dbgcfgtool] %s() LINE:%d,  nv cmd remote result failed! (%d)\n", __func__, __LINE__, rep.retval);
+    }
+    else
+    {
+        ret = 0;
+        printk(KERN_INFO "[dbgcfgtool] detect_hw_reset = 0x%x\n", value);
+    }
+
+    msm_rpc_close(nv_ep);
+    return ret;
+    
+}
+//SW2-5-1-MP-DbgCfgTool-01+]
+
 static void getNextWord(char** buf, char* result, int max)
 {
     char * cur = *buf;
@@ -565,8 +631,7 @@ int dbgcfgtool_ioctl(
             }
             else
             {
-                //SW2-5-1-MP-Modem_Debug_NV-00- ret = DbgCfgSetErrorAction(DbgArg.value);
-                ret = fih_write_modem_debug_nv(DbgArg.value); //SW2-5-1-MP-Modem_Debug_NV-00+
+                ret = DbgCfgSetErrorAction(DbgArg.value);
             }
 
             if( ret != 0 )
@@ -576,6 +641,23 @@ int dbgcfgtool_ioctl(
 
             break;
         //Div6-PT2-Core-BH-DbgCfgToolPorting-01+]
+        //SW2-5-1-MP-DbgCfgTool-01+[
+        case DBG_IOCTL_CMD_SET_DETECT_HW_RESET:
+            if (copy_from_user(&DbgArg, (void*)pDbgArg, sizeof(dbgcfg_ioctl_arg)))
+            {
+                ret = -EINVAL;
+                printk(KERN_ERR "[dbgcfgtool] %s() LINE:%d, copy_to_user failed in DBG_IOCTL_CMD_GET_DBGCFG_BIT.(ret: %d)\n", __func__, __LINE__, ret);
+            }
+
+            ret = DbgCfgSetDetectHWReset(DbgArg.value);
+
+            if( ret != 0 )
+            {
+                printk(KERN_ERR "dbgcfgtool_ioctl: Fail to call DbgCfgSetDetectHWReset(), ret=%d.\n",ret);
+            }
+
+            break;
+        //SW2-5-1-MP-DbgCfgTool-01+]
         default:
             printk(KERN_ERR "[dbgcfgtool_ioctl] Unknown IOCTL(Line: %d).\n", __LINE__);
             ret = -EINVAL;

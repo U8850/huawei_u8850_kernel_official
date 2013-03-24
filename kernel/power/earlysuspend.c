@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/rtc.h>
+#include <linux/syscalls.h> /* sys_sync */
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
 
@@ -34,12 +35,6 @@
 #include "mach/fih_msm_battery.h"
 //Div2-SW2-BSP-pmlog, HenryMCWang -
 
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-#include <linux/timer.h>
-extern struct timer_list suspend_hang_timer;
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
 enum {
 	DEBUG_USER_STATE = 1U << 0,
 	DEBUG_SUSPEND = 1U << 2,
@@ -117,15 +112,7 @@ static void early_suspend(struct work_struct *work)
 #if defined(CONFIG_FIH_POWER_LOG) && defined(CONFIG_BATTERY_FIH_MSM)
 	struct batt_info_interface* batt_info_if = get_batt_info_if();
 #endif
-
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	pr_info("early_suspend: add suspend_hang_timer\n");
-	suspend_hang_timer.data = EARLY_SUSPEND_HANG;
-	mod_timer(&suspend_hang_timer, jiffies + POLLING_DUMP_SUSPEND_HANG_SECS*HZ);
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
-
+	
 	mutex_lock(&early_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED)
@@ -178,20 +165,32 @@ static void early_suspend(struct work_struct *work)
 #endif	// CONFIG_FIH_FXX
 //[---] Add for fast dormancy
 
-	suspend_sys_sync_queue();
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("early_suspend: sync\n");
+
+
+//Div2-SW2-BSP-improve FB0.B-3948, PenhoYu+[
+	if (state & SUSPEND_REQUESTED) {
+//Div2-SW2-BSP-EarlySuspendLog, VinceCCTsai+[
+#ifdef CONFIG_FIH_SUSPEND_RESUME_LOG
+	calltime = ktime_get();
+	sys_sync();
+	rettime = ktime_get();
+	delta = ktime_sub(rettime, calltime);
+	duration = (unsigned long long) ktime_to_ns(delta) >> 10;
+	pr_info("early suspend sync: takes %Ld usecs\n", duration);
+#else
+	sys_sync();
+#endif
+//Div2-SW2-BSP-EarlySuspendLog, VinceCCTsai-]
+	}
+//Div2-SW2-BSP-improve FB0.B-3948, PenhoYu-]
 
 abort:
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED_AND_SUSPENDED)
 		wake_unlock(&main_wake_lock);
 	spin_unlock_irqrestore(&state_lock, irqflags);
-	
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	pr_info("early_suspend: del suspend_hang_timer\n");
-	del_timer(&suspend_hang_timer);
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
 }
 
 static void late_resume(struct work_struct *work)
@@ -210,14 +209,6 @@ static void late_resume(struct work_struct *work)
 #if defined(CONFIG_FIH_POWER_LOG) && defined(CONFIG_BATTERY_FIH_MSM)
 	struct batt_info_interface* batt_info_if = get_batt_info_if();
 #endif
-
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	pr_info("late_resume: add suspend_hang_timer\n");
-	suspend_hang_timer.data = LATE_RESUME_HANG;
-	mod_timer(&suspend_hang_timer, jiffies + POLLING_DUMP_SUSPEND_HANG_SECS*HZ);
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
 
 	mutex_lock(&early_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -279,13 +270,6 @@ static void late_resume(struct work_struct *work)
 //Div2-SW2-BSP-EarlySuspendLog, VinceCCTsai-]
 abort:
 	mutex_unlock(&early_suspend_lock);
-	
-//SW2-5-1-HC-Suspend_Hang_Timer-00+[
-#ifdef CONFIG_FIH_SUSPEND_HANG_TIMER
-	pr_info("late_resume: del suspend_hang_timer\n");
-	del_timer(&suspend_hang_timer);
-#endif
-//SW2-5-1-HC-Suspend_Hang_Timer-00+]
 }
 
 void request_suspend_state(suspend_state_t new_state)
