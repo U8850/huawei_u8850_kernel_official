@@ -504,10 +504,9 @@ static void atmel_mxt165_report(struct atmel_mxt165_info *ts, int i, int x, int 
             if (i == 0)
             {
 #ifdef ATMEL_MXT165_MT
-            input_report_abs(ts->touch_input, ABS_X, x);
-            input_report_abs(ts->touch_input, ABS_Y, y);
-            input_report_abs(ts->touch_input, ABS_PRESSURE, pressure);
-            input_report_key(ts->touch_input, BTN_TOUCH, 0);
+                input_report_abs(ts->touch_input, ABS_MT_TOUCH_MAJOR, 0);
+                input_report_abs(ts->touch_input, ABS_MT_POSITION_X, x);
+                input_report_abs(ts->touch_input, ABS_MT_POSITION_Y, y);
 #else
                 input_report_abs(ts->touch_input, ABS_X, x);
                 input_report_abs(ts->touch_input, ABS_Y, y);
