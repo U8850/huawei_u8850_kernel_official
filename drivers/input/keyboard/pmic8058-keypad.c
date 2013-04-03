@@ -105,6 +105,8 @@
 #define SILENT_KEY_UP_GPIO		18 //Div2D5-OwenHung-keypad driver porting+
 #define SF4V5_PMICKPD_NAME	"pm8058-keypad"
 #define PM8058_GPIO_PM_TO_SYS(pm_gpio)     (pm_gpio + NR_GPIO_IRQS)
+#define KEYRELEASE			0
+#define KEYPRESS			1
 
 bool	silent_key_down = false;
 static int silent_on;
@@ -566,17 +568,17 @@ static irqreturn_t pmic8058_kp_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-//Div2D5-OwenHung-keypad driver porting+
+//Div2D5-AriesHuang-keypad driver porting+
 #ifdef CONFIG_FIH_PROJECT_SF4V5
 static irqreturn_t pmic8058_silent_key_handler(int irq, void *data)
 {
 	struct pmic8058_kp *kp = data;
 	bool gpio_val;
-	printk(KERN_INFO "[KEYPAD] Silent Key Up IRQ ~");
+	printk(KERN_INFO "[KEYPAD] Silent Key IRQ ~");
 
 	if(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, SILENT_KEY_UP_GPIO) == irq)
 	{
-		gpio_val = (bool)gpio_get_value(PM8058_GPIO_PM_TO_SYS(SILENT_KEY_UP_GPIO));
+		gpio_val = (bool)gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(SILENT_KEY_UP_GPIO));
 		
 		set_irq_type(irq, gpio_val ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH);
 
@@ -584,9 +586,9 @@ static irqreturn_t pmic8058_silent_key_handler(int irq, void *data)
 		{
 			if(!silent_key_down)
 			{	
-				//printk(KERN_INFO "[KEYPAD] SilentKeyUp GPIO HIGH\n");			
 				printk(KERN_INFO "[KEYPAD] Silent Key Down \n");
-				input_report_key(kp->input, KEY_SILENT, 1);
+				input_report_key(kp->input, KEY_SILENT, KEYPRESS);
+				input_report_key(kp->input, KEY_SILENT, KEYRELEASE);
 				silent_key_down = true;
 				silent_on =1;
 			}
@@ -595,10 +597,10 @@ static irqreturn_t pmic8058_silent_key_handler(int irq, void *data)
 		{
 			if(silent_key_down)
 			{	
-				//printk(KERN_INFO "[KEYPAD] SilentKeyUp GPIO LOW\n");			
 				printk(KERN_INFO "[KEYPAD] Silent Key Up \n");
-				input_report_key(kp->input, KEY_SILENT, 0); 
-				silent_key_down = false;				
+				input_report_key(kp->input, KEY_SILENTOFF, KEYPRESS);
+				input_report_key(kp->input, KEY_SILENTOFF, KEYRELEASE);
+				silent_key_down = false;
 				silent_on =0;
 			}
 		}
@@ -651,7 +653,7 @@ static int gpio_keypad_config(struct pmic8058_kp *kp)
 	return rc;
 }
 #endif
-//Div2D5-OwenHung-keypad driver porting-
+//Div2D5-AriesHuang-keypad driver porting-
 
 /*
  * NOTE: Last row multi-interrupt issue
@@ -996,27 +998,24 @@ static int __devinit pmic8058_kp_probe(struct platform_device *pdev)
 #ifdef CONFIG_FIH_PROJECT_SF4V5
 	gpio_keypad_config(kp);
 
-	gpio_val = (bool)gpio_get_value(PM8058_GPIO_PM_TO_SYS(SILENT_KEY_UP_GPIO));
+	gpio_val = (bool)gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(SILENT_KEY_UP_GPIO));
+	printk(KERN_INFO "[KEYPAD] Initial Silent Key gpio value:%d.\n", gpio_val);
+
 	if(gpio_val)
 	{	
-		input_report_key(kp->input, KEY_SILENT, 1);
-		printk(KERN_INFO "[KEYPAD] Initial is Silent Key Down so add to report key.\n");
 		silent_key_down = true;
 		silent_on =1;
 	}	
 	else
 	{	
-		input_report_key(kp->input, KEY_SILENT, 0);
-		printk(KERN_INFO "[KEYPAD] Initial is Silent Key Up so add to report key.\n");
 		silent_key_down = false;
 		silent_on =0;
 	}
-	input_sync(kp->input);
 	
 	rc = request_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, SILENT_KEY_UP_GPIO), &pmic8058_silent_key_handler,
 				 gpio_val ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH, SF4V5_PMICKPD_NAME, kp);
 	if (rc < 0) {
-		dev_err(&pdev->dev, "failed to request Silent Key UP irq\n");
+		dev_err(&pdev->dev, "failed to request Silent Key irq\n");
 		goto err_req_gpio_irq;
 	}
 #endif
